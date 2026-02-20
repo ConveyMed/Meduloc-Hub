@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.conveymed.app",
+      "sha256_cert_fingerprints": [
+        "5A:1A:E8:44:C2:9B:27:48:6C:32:B5:22:C1:60:54:3B:B8:0A:3B:79:4C:F7:CC:6C:C5:8F:A7:82:00:F1:80:0D"
+      ]
+    }
+  }
+]

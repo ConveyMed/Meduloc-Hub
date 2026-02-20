@@ -43,6 +43,7 @@ import Chat from './pages/Chat';
 import ChatConversation from './pages/ChatConversation';
 import ManageChat from './pages/ManageChat';
 import ManageAnalytics from './pages/ManageAnalytics';
+import { TermsAndConditions, PrivacyPolicy, DeleteAccount } from './pages/LegalSupport';
 import BottomNav from './components/BottomNav';
 import AIChatPanel from './components/AIChatPanel';
 import { FieldIntelProvider } from './field-intel/FieldIntelContext';
@@ -565,6 +566,27 @@ function AppContent() {
               : !isProfileComplete
                 ? <Navigate to="/profile-complete" replace />
                 : <ManageAnalytics />
+          } />
+          <Route path="/terms" element={
+            !isAuthenticated
+              ? <Navigate to="/" replace />
+              : !isProfileComplete
+                ? <Navigate to="/profile-complete" replace />
+                : <AppShell showNav={showBottomNav}><TermsAndConditions /></AppShell>
+          } />
+          <Route path="/privacy" element={
+            !isAuthenticated
+              ? <Navigate to="/" replace />
+              : !isProfileComplete
+                ? <Navigate to="/profile-complete" replace />
+                : <AppShell showNav={showBottomNav}><PrivacyPolicy /></AppShell>
+          } />
+          <Route path="/delete-account" element={
+            !isAuthenticated
+              ? <Navigate to="/" replace />
+              : !isProfileComplete
+                ? <Navigate to="/profile-complete" replace />
+                : <AppShell showNav={showBottomNav}><DeleteAccount /></AppShell>
           } />
           {/* Field Intel Zone */}
           <Route path="/field-intel" element={

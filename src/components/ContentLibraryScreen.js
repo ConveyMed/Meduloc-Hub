@@ -481,6 +481,7 @@ const ContentLibraryScreen = ({ type, title }) => {
   const {
     libraryCategories,
     trainingCategories,
+    formsCategories,
     loading: contentLoading,
     refreshContent,
   } = useContent();
@@ -502,7 +503,7 @@ const ContentLibraryScreen = ({ type, title }) => {
   }, [refreshContent]);
 
   // Get categories based on type
-  const categories = type === 'library' ? libraryCategories : trainingCategories;
+  const categories = type === 'library' ? libraryCategories : type === 'forms' ? formsCategories : trainingCategories;
 
   // Add type to each category for reference
   const categoriesWithType = categories.map(c => ({ ...c, type }));

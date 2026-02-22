@@ -19,6 +19,7 @@ export const ContentProvider = ({ children }) => {
   // Categories and items state
   const [libraryCategories, setLibraryCategories] = useState([]);
   const [trainingCategories, setTrainingCategories] = useState([]);
+  const [formsCategories, setFormsCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // User's downloaded content
@@ -35,7 +36,7 @@ export const ContentProvider = ({ children }) => {
   }, [initialLoaded]);
 
   // Computed loading - only true if actually loading AND no data yet
-  const isLoading = loading && libraryCategories.length === 0 && trainingCategories.length === 0;
+  const isLoading = loading && libraryCategories.length === 0 && trainingCategories.length === 0 && formsCategories.length === 0;
 
   // Load user downloads when user changes
   useEffect(() => {
@@ -138,6 +139,7 @@ export const ContentProvider = ({ children }) => {
       // Separate library and training categories with their items
       const library = [];
       const training = [];
+      const forms = [];
 
       (categoriesData || []).forEach(category => {
         const categoryWithItems = {
@@ -149,11 +151,14 @@ export const ContentProvider = ({ children }) => {
           library.push(categoryWithItems);
         } else if (category.type === 'training') {
           training.push(categoryWithItems);
+        } else if (category.type === 'forms') {
+          forms.push(categoryWithItems);
         }
       });
 
       setLibraryCategories(library);
       setTrainingCategories(training);
+      setFormsCategories(forms);
       setInitialLoaded(true);
 
       // Sync any stale "processing" videos with Bunny's actual status
@@ -167,6 +172,7 @@ export const ContentProvider = ({ children }) => {
         }));
         setLibraryCategories(applyUpdates);
         setTrainingCategories(applyUpdates);
+        setFormsCategories(applyUpdates);
       });
     } catch (err) {
       console.error('Error loading content:', err);
@@ -290,7 +296,7 @@ export const ContentProvider = ({ children }) => {
   const addCategory = async (type, title, description = '') => {
     try {
       // Get max sort order
-      const categories = type === 'library' ? libraryCategories : trainingCategories;
+      const categories = type === 'library' ? libraryCategories : type === 'forms' ? formsCategories : trainingCategories;
       const maxOrder = categories.length > 0
         ? Math.max(...categories.map(c => c.sort_order || 0))
         : -1;
@@ -312,6 +318,8 @@ export const ContentProvider = ({ children }) => {
       const newCategory = { ...data, items: [] };
       if (type === 'library') {
         setLibraryCategories(prev => [...prev, newCategory]);
+      } else if (type === 'forms') {
+        setFormsCategories(prev => [...prev, newCategory]);
       } else {
         setTrainingCategories(prev => [...prev, newCategory]);
       }
@@ -340,6 +348,7 @@ export const ContentProvider = ({ children }) => {
 
       setLibraryCategories(updateState);
       setTrainingCategories(updateState);
+      setFormsCategories(updateState);
     } catch (err) {
       console.error('Error updating category:', err);
       throw err;
@@ -359,6 +368,7 @@ export const ContentProvider = ({ children }) => {
       // Remove from local state
       setLibraryCategories(prev => prev.filter(c => c.id !== categoryId));
       setTrainingCategories(prev => prev.filter(c => c.id !== categoryId));
+      setFormsCategories(prev => prev.filter(c => c.id !== categoryId));
     } catch (err) {
       console.error('Error deleting category:', err);
       throw err;
@@ -379,6 +389,8 @@ export const ContentProvider = ({ children }) => {
 
       if (type === 'library') {
         setLibraryCategories(updateState);
+      } else if (type === 'forms') {
+        setFormsCategories(updateState);
       } else {
         setTrainingCategories(updateState);
       }
@@ -406,7 +418,7 @@ export const ContentProvider = ({ children }) => {
   const addContentItem = async (categoryId, itemData) => {
     try {
       // Get the category to determine type
-      const allCategories = [...libraryCategories, ...trainingCategories];
+      const allCategories = [...libraryCategories, ...trainingCategories, ...formsCategories];
       const category = allCategories.find(c => c.id === categoryId);
       if (!category) throw new Error('Category not found');
 
@@ -459,6 +471,8 @@ export const ContentProvider = ({ children }) => {
 
       if (category.type === 'library') {
         setLibraryCategories(updateState);
+      } else if (category.type === 'forms') {
+        setFormsCategories(updateState);
       } else {
         setTrainingCategories(updateState);
       }
@@ -481,7 +495,7 @@ export const ContentProvider = ({ children }) => {
         throw new Error('At least one category must be selected');
       }
 
-      const allCategories = [...libraryCategories, ...trainingCategories];
+      const allCategories = [...libraryCategories, ...trainingCategories, ...formsCategories];
 
       // Insert the content item (without category_id since it goes to multiple)
       const { data, error } = await supabase
@@ -549,6 +563,7 @@ export const ContentProvider = ({ children }) => {
 
       setLibraryCategories(updateCategories);
       setTrainingCategories(updateCategories);
+      setFormsCategories(updateCategories);
 
       return data;
     } catch (err) {
@@ -575,6 +590,7 @@ export const ContentProvider = ({ children }) => {
 
       setLibraryCategories(updateState);
       setTrainingCategories(updateState);
+      setFormsCategories(updateState);
     } catch (err) {
       console.error('Error updating content item:', err);
       throw err;
@@ -585,7 +601,7 @@ export const ContentProvider = ({ children }) => {
   const deleteContentItem = async (itemId) => {
     try {
       // Clean up Bunny video if one is attached
-      const allItems = [...libraryCategories, ...trainingCategories].flatMap(c => c.items);
+      const allItems = [...libraryCategories, ...trainingCategories, ...formsCategories].flatMap(c => c.items);
       const itemToDelete = allItems.find(i => i.id === itemId);
       if (itemToDelete?.bunny_video_id) {
         try {
@@ -610,6 +626,7 @@ export const ContentProvider = ({ children }) => {
 
       setLibraryCategories(updateState);
       setTrainingCategories(updateState);
+      setFormsCategories(updateState);
     } catch (err) {
       console.error('Error deleting content item:', err);
       throw err;
@@ -637,7 +654,7 @@ export const ContentProvider = ({ children }) => {
       // If not in any category anymore, delete the content item too
       if (!remaining || remaining.length === 0) {
         // Clean up Bunny video if one is attached
-        const allItems = [...libraryCategories, ...trainingCategories].flatMap(c => c.items);
+        const allItems = [...libraryCategories, ...trainingCategories, ...formsCategories].flatMap(c => c.items);
         const itemToDelete = allItems.find(i => i.id === itemId);
         if (itemToDelete?.bunny_video_id) {
           try {
@@ -663,6 +680,7 @@ export const ContentProvider = ({ children }) => {
 
       setLibraryCategories(updateState);
       setTrainingCategories(updateState);
+      setFormsCategories(updateState);
     } catch (err) {
       console.error('Error removing content from category:', err);
       throw err;
@@ -686,6 +704,7 @@ export const ContentProvider = ({ children }) => {
 
       setLibraryCategories(updateState);
       setTrainingCategories(updateState);
+      setFormsCategories(updateState);
 
       // Update in database (junction table for many-to-many relationships)
       const updates = orderedIds.map((id, index) => ({
@@ -711,7 +730,7 @@ export const ContentProvider = ({ children }) => {
   const getDownloadedItems = useCallback(() => {
     const allItems = [];
 
-    [...libraryCategories, ...trainingCategories].forEach(category => {
+    [...libraryCategories, ...trainingCategories, ...formsCategories].forEach(category => {
       category.items.forEach(item => {
         if (userDownloads.has(item.id)) {
           allItems.push({
@@ -724,7 +743,7 @@ export const ContentProvider = ({ children }) => {
     });
 
     return allItems;
-  }, [libraryCategories, trainingCategories, userDownloads]);
+  }, [libraryCategories, trainingCategories, formsCategories, userDownloads]);
 
   // Force refresh content (for pull-to-refresh, etc.)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -734,6 +753,7 @@ export const ContentProvider = ({ children }) => {
     // Data
     libraryCategories,
     trainingCategories,
+    formsCategories,
     loading: isLoading, // Only true when actually loading with no data
     userDownloads,
 

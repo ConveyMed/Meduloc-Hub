@@ -220,8 +220,7 @@ function ProfileComplete({ onComplete }) {
 
       const { error } = await supabase
         .from('users')
-        .update(updateData)
-        .eq('id', user.id);
+        .upsert({ id: user.id, email: user.email, ...updateData });
 
       if (error) throw error;
 

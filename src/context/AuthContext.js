@@ -239,6 +239,8 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.log('Error clearing cached auth:', e);
     }
+    // Clear org code verification
+    localStorage.setItem('org_code_verified', 'false');
     setUser(null);
     setUserProfile(null);
   };

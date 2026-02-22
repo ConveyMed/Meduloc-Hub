@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { App } from '@capacitor/app';
+import { supabase } from '../config/supabase';
 
 const LogoutIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -161,6 +162,45 @@ const Profile = () => {
 
   // Check if user is admin/editor
   const isAdmin = userProfile?.is_admin === true || userProfile?.role === 'admin' || userProfile?.role === 'editor';
+
+  // Organization Code admin state
+  const [orgCode, setOrgCode] = useState('');
+  const [orgCodeLastChanged, setOrgCodeLastChanged] = useState(null);
+  const [editingOrgCode, setEditingOrgCode] = useState(false);
+  const [newOrgCode, setNewOrgCode] = useState('');
+  const [orgCodeSaving, setOrgCodeSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin && !isOwner) return;
+    const fetchOrgCode = async () => {
+      const { data } = await supabase
+        .from('organization_code')
+        .select('*')
+        .limit(1)
+        .single();
+      if (data) {
+        setOrgCode(data.code);
+        setOrgCodeLastChanged(data.updated_at);
+      }
+    };
+    fetchOrgCode();
+  }, [isAdmin, isOwner]);
+
+  const handleSaveOrgCode = async () => {
+    if (!newOrgCode.trim()) return;
+    setOrgCodeSaving(true);
+    const { error } = await supabase
+      .from('organization_code')
+      .update({ code: newOrgCode.trim(), updated_at: new Date().toISOString(), updated_by: user?.id })
+      .not('id', 'is', null);
+    if (!error) {
+      setOrgCode(newOrgCode.trim());
+      setOrgCodeLastChanged(new Date().toISOString());
+      setEditingOrgCode(false);
+      setNewOrgCode('');
+    }
+    setOrgCodeSaving(false);
+  };
 
   // Visibility settings (owner only)
   const [showChat, setShowChat] = useState(() => localStorage.getItem('showChat') !== 'false');
@@ -364,6 +404,103 @@ const Profile = () => {
                   </div>
                   <ChevronRightIcon />
                 </button>
+              </div>
+            </>
+          )}
+
+          {/* Organization Code - Admins & Owners */}
+          {(isAdmin || isOwner) && (
+            <>
+              <div style={styles.sectionLabel}>Organization Code</div>
+              <div style={styles.menuSection}>
+                <div style={{ padding: '16px' }}>
+                  {!editingOrgCode ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Current Code</div>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', letterSpacing: '3px' }}>{orgCode || '---'}</div>
+                        </div>
+                        <button
+                          onClick={() => { setEditingOrgCode(true); setNewOrgCode(orgCode); }}
+                          style={{
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#004B87',
+                            backgroundColor: 'rgba(0, 75, 135, 0.08)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      {orgCodeLastChanged && (
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          Last changed {new Date(orgCodeLastChanged).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <input
+                        type="text"
+                        value={newOrgCode}
+                        onChange={(e) => setNewOrgCode(e.target.value)}
+                        placeholder="Enter new code"
+                        autoFocus
+                        style={{
+                          padding: '12px 16px',
+                          fontSize: '16px',
+                          border: '2px solid #004B87',
+                          borderRadius: '10px',
+                          outline: 'none',
+                          textAlign: 'center',
+                          letterSpacing: '3px',
+                          fontWeight: '600',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => { setEditingOrgCode(false); setNewOrgCode(''); }}
+                          style={{
+                            flex: 1,
+                            padding: '10px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#64748b',
+                            backgroundColor: '#f1f5f9',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveOrgCode}
+                          disabled={orgCodeSaving || !newOrgCode.trim()}
+                          style={{
+                            flex: 1,
+                            padding: '10px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            backgroundColor: '#004B87',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            opacity: orgCodeSaving || !newOrgCode.trim() ? 0.6 : 1,
+                          }}
+                        >
+                          {orgCodeSaving ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

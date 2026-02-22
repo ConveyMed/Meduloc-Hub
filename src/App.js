@@ -78,6 +78,7 @@ import { AIChatProvider } from './context/AIChatContext';
 import { ChatProvider } from './context/ChatContext';
 import { AnalyticsProvider } from './context/AnalyticsContext';
 import CreatePostModal from './components/CreatePostModal';
+import OrganizationGate from './pages/OrganizationGate';
 import './App.css';
 
 // Routes that should NOT show bottom nav
@@ -196,6 +197,9 @@ function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
+  const [orgCodeVerified, setOrgCodeVerified] = useState(() =>
+    localStorage.getItem('org_code_verified') !== 'false'
+  );
 
   // Check for signup confirmation in URL hash and redirect to email-confirmed page
   useEffect(() => {
@@ -367,6 +371,16 @@ function AppContent() {
   // Show offline screen when offline and on a non-allowed route
   if (isOffline && isAuthenticated && isProfileComplete && !isOfflineAllowed) {
     return <OfflineScreen />;
+  }
+
+  // Show organization code gate for authenticated users who haven't verified
+  if (isAuthenticated && isProfileComplete && !orgCodeVerified) {
+    return (
+      <OrganizationGate onVerified={() => {
+        localStorage.setItem('org_code_verified', 'true');
+        setOrgCodeVerified(true);
+      }} />
+    );
   }
 
   return (

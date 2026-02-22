@@ -79,6 +79,7 @@ import { ChatProvider } from './context/ChatContext';
 import { AnalyticsProvider } from './context/AnalyticsContext';
 import CreatePostModal from './components/CreatePostModal';
 import OrganizationGate from './pages/OrganizationGate';
+import ManageOrgCode from './pages/ManageOrgCode';
 import './App.css';
 
 // Routes that should NOT show bottom nav
@@ -597,6 +598,13 @@ function AppContent() {
               : !isProfileComplete
                 ? <Navigate to="/profile-complete" replace />
                 : <AppShell showNav={showBottomNav}><ManageChat /></AppShell>
+          } />
+          <Route path="/manage-org-code" element={
+            !isAuthenticated
+              ? <Navigate to="/" replace />
+              : !isProfileComplete
+                ? <Navigate to="/profile-complete" replace />
+                : <AppShell showNav={showBottomNav}><ManageOrgCode /></AppShell>
           } />
           <Route path="/manage-analytics/*" element={
             !isAuthenticated

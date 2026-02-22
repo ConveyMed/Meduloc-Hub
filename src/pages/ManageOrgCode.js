@@ -20,19 +20,23 @@ const ManageOrgCode = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('organization_code')
-        .select('*')
-        .limit(1)
-        .single();
-      if (data) {
-        setOrgCode(data.code);
-        setLastChanged(data.updated_at);
+    const fetchCode = async () => {
+      try {
+        const { data } = await supabase
+          .from('organization_code')
+          .select('*')
+          .limit(1)
+          .single();
+        if (data) {
+          setOrgCode(data.code);
+          setLastChanged(data.updated_at);
+        }
+      } catch (err) {
+        console.log('Org code fetch error:', err);
       }
       setLoading(false);
     };
-    fetch();
+    fetchCode();
   }, []);
 
   const handleSave = async () => {

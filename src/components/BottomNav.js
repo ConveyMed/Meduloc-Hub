@@ -37,6 +37,12 @@ const TrainingIcon = () => (
   </svg>
 );
 
+const ResourcesIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
 const FormsIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
@@ -159,10 +165,12 @@ const BottomNav = () => {
   const getDirectoryVisible = () => localStorage.getItem('showDirectory') !== 'false';
   const getAIShortcutVisible = () => localStorage.getItem('showAIShortcut') !== 'false';
   const getFieldIntelVisible = () => localStorage.getItem('showFieldIntel') !== 'false';
+  const getUpdatesVisible = () => localStorage.getItem('showUpdates') !== 'false';
   const [showChat, setShowChat] = useState(getChatVisible);
   const [showDirectory, setShowDirectory] = useState(getDirectoryVisible);
   const [showAIShortcut, setShowAIShortcut] = useState(getAIShortcutVisible);
   const [showFieldIntel, setShowFieldIntel] = useState(getFieldIntelVisible);
+  const [showUpdates, setShowUpdates] = useState(getUpdatesVisible);
 
   // Listen for storage changes (from Profile page)
   useEffect(() => {
@@ -171,6 +179,7 @@ const BottomNav = () => {
       setShowDirectory(getDirectoryVisible());
       setShowAIShortcut(getAIShortcutVisible());
       setShowFieldIntel(getFieldIntelVisible());
+      setShowUpdates(getUpdatesVisible());
     };
     window.addEventListener('storage', handleStorage);
     window.addEventListener('navVisibilityChange', handleStorage);
@@ -336,10 +345,10 @@ const BottomNav = () => {
               <span style={styles.closeLabel}>Close</span>
             </button>
 
-            {/* Top row (main items + Updates) */}
+            {/* Top row (main items + Updates if enabled) */}
             <div style={styles.navRow}>
               {mainItems.map(renderTab)}
-              {renderUpdatesButton()}
+              {showUpdates && renderUpdatesButton()}
             </div>
 
             {/* Bottom row (secondary items) */}

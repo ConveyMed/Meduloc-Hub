@@ -477,7 +477,7 @@ const ContentModal = ({ item, onClose, isDownloaded, onDownload, downloadProgres
 };
 
 // Main Component
-const ContentLibraryScreen = ({ type, title }) => {
+const ContentLibraryScreen = ({ type, title, hideHeader }) => {
   const {
     libraryCategories,
     trainingCategories,
@@ -560,12 +560,14 @@ const ContentLibraryScreen = ({ type, title }) => {
   return (
     <div style={styles.container}>
       {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <h1 style={styles.headerTitle}>{title}</h1>
-        </div>
-        <div style={styles.headerBorder} />
-      </header>
+      {!hideHeader && (
+        <header style={styles.header}>
+          <div style={styles.headerInner}>
+            <h1 style={styles.headerTitle}>{title}</h1>
+          </div>
+          <div style={styles.headerBorder} />
+        </header>
+      )}
 
       {/* Content */}
       <div style={styles.contentContainer}>

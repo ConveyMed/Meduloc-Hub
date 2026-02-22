@@ -36,6 +36,7 @@ import ManageLibrary from './pages/ManageLibrary';
 import ManageTraining from './pages/ManageTraining';
 import Forms from './pages/Forms';
 import ManageForms from './pages/ManageForms';
+import Resources from './pages/Resources';
 import Updates from './pages/Updates';
 import ManageUpdates from './pages/ManageUpdates';
 import ManageAI from './pages/ManageAI';
@@ -519,6 +520,13 @@ function AppContent() {
               : !isProfileComplete
                 ? <Navigate to="/profile-complete" replace />
                 : <AppShell showNav={showBottomNav}><ManageForms /></AppShell>
+          } />
+          <Route path="/resources" element={
+            !isAuthenticated
+              ? <Navigate to="/" replace />
+              : !isProfileComplete
+                ? <Navigate to="/profile-complete" replace />
+                : <AppShell showNav={showBottomNav}><Resources /></AppShell>
           } />
           <Route path="/updates" element={
             !isAuthenticated

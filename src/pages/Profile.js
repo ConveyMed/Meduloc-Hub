@@ -167,6 +167,7 @@ const Profile = () => {
   const [showDirectory, setShowDirectory] = useState(() => localStorage.getItem('showDirectory') !== 'false');
   const [showAIShortcut, setShowAIShortcut] = useState(() => localStorage.getItem('showAIShortcut') !== 'false');
   const [showFieldIntel, setShowFieldIntel] = useState(() => localStorage.getItem('showFieldIntel') !== 'false');
+  const [showUpdates, setShowUpdates] = useState(() => localStorage.getItem('showUpdates') !== 'false');
   const [appVersion, setAppVersion] = useState('');
 
   // Get app version from native (Capacitor) or fallback
@@ -209,6 +210,13 @@ const Profile = () => {
     const newValue = !showFieldIntel;
     setShowFieldIntel(newValue);
     localStorage.setItem('showFieldIntel', String(newValue));
+    window.dispatchEvent(new Event('navVisibilityChange'));
+  };
+
+  const toggleUpdates = () => {
+    const newValue = !showUpdates;
+    setShowUpdates(newValue);
+    localStorage.setItem('showUpdates', String(newValue));
     window.dispatchEvent(new Event('navVisibilityChange'));
   };
 
@@ -342,10 +350,17 @@ const Profile = () => {
                   </div>
                   <ChevronRightIcon />
                 </button>
-                <button style={{...styles.menuItem, borderBottom: 'none'}} onClick={() => navigate('/manage-analytics')}>
+                <button style={styles.menuItem} onClick={() => navigate('/manage-analytics')}>
                   <div style={styles.menuItemWithIcon}>
                     <AnalyticsIcon />
                     <span style={styles.menuText}>Analytics Dashboard</span>
+                  </div>
+                  <ChevronRightIcon />
+                </button>
+                <button style={{...styles.menuItem, borderBottom: 'none'}} onClick={() => navigate('/resources')}>
+                  <div style={styles.menuItemWithIcon}>
+                    <LibraryIcon />
+                    <span style={styles.menuText}>Resource Demo</span>
                   </div>
                   <ChevronRightIcon />
                 </button>
@@ -419,7 +434,7 @@ const Profile = () => {
                     }} />
                   </button>
                 </div>
-                <div style={{...styles.toggleItem, borderBottom: 'none'}}>
+                <div style={styles.toggleItem}>
                   <div style={styles.menuItemWithIcon}>
                     <AnalyticsIcon />
                     <span style={styles.menuText}>Customer / Field Intel</span>
@@ -434,6 +449,24 @@ const Profile = () => {
                     <div style={{
                       ...styles.toggleKnob,
                       transform: showFieldIntel ? 'translateX(20px)' : 'translateX(0)',
+                    }} />
+                  </button>
+                </div>
+                <div style={{...styles.toggleItem, borderBottom: 'none'}}>
+                  <div style={styles.menuItemWithIcon}>
+                    <BellIcon />
+                    <span style={styles.menuText}>Show Updates</span>
+                  </div>
+                  <button
+                    style={{
+                      ...styles.toggle,
+                      backgroundColor: showUpdates ? '#004B87' : '#e2e8f0',
+                    }}
+                    onClick={toggleUpdates}
+                  >
+                    <div style={{
+                      ...styles.toggleKnob,
+                      transform: showUpdates ? 'translateX(20px)' : 'translateX(0)',
                     }} />
                   </button>
                 </div>

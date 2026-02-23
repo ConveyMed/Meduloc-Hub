@@ -144,6 +144,7 @@ const ContentCard = ({ item, onClick, isDownloaded, downloadProgress }) => {
             src={item.thumbnail_url}
             alt={item.title}
             style={styles.thumbnail}
+            loading="lazy"
           />
         ) : (
           <div style={styles.thumbnailPlaceholder}>
@@ -311,6 +312,7 @@ const ContentModal = ({ item, onClose, isDownloaded, onDownload, downloadProgres
                 src={item.thumbnail_url}
                 alt={item.title}
                 style={styles.modalThumbnail}
+                loading="lazy"
               />
             ) : (
               <div style={styles.modalThumbnailPlaceholder}>

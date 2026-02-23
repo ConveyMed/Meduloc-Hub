@@ -211,6 +211,41 @@ export const PostsProvider = ({ children }) => {
     }
   }, [initialLoaded]);
 
+  // Real-time subscription for live post updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('posts-realtime')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        (payload) => {
+          const post = payload.new;
+          if (post.is_archived) return;
+          if (post.scheduled_at && new Date(post.scheduled_at) > new Date()) return;
+          if (post.user_id === user.id) return;
+          loadPosts(true);
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        () => {
+          loadPosts(true);
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'posts' },
+        (payload) => {
+          setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   // Computed loading - only true if actually loading AND no data yet
   const isLoading = loading && posts.length === 0;
 

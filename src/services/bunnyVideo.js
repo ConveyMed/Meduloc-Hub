@@ -2,7 +2,7 @@ import * as tus from 'tus-js-client';
 
 const isCapacitor = window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
 const FUNCTIONS_BASE = isCapacitor
-  ? 'https://meduloc-hub.netlify.app/.netlify/functions/bunny-video'
+  ? 'https://medulochub.netlify.app/.netlify/functions/bunny-video'
   : '/.netlify/functions/bunny-video';
 
 export async function createBunnyVideo(title) {

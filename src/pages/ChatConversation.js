@@ -977,7 +977,7 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
+    height: '100dvh',
     backgroundColor: '#f8fafc',
   },
   header: {
@@ -1285,7 +1285,7 @@ const styles = {
     backgroundColor: '#ffffff',
     borderTop: '1px solid #e2e8f0',
     padding: '12px 16px',
-    paddingBottom: 'calc(var(--safe-area-bottom, 0px) - 8px)',
+    paddingBottom: 'max(12px, calc(env(safe-area-inset-bottom, 0px) + 4px))',
   },
   editingBanner: {
     display: 'flex',

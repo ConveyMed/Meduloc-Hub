@@ -450,7 +450,7 @@ const Post = ({ post, currentUserId, isAdmin, onEditPost }) => {
               {media.type === 'video' ? (
                 <video src={media.url} style={styles.postImage} controls playsInline />
               ) : (
-                <img src={media.url} alt="Post" style={styles.postImage} />
+                <img src={media.url} alt="Post" style={styles.postImage} loading="lazy" />
               )}
             </div>
           );
@@ -472,7 +472,7 @@ const Post = ({ post, currentUserId, isAdmin, onEditPost }) => {
                     {media.type === 'video' ? (
                       <video src={media.url} style={styles.carouselMedia} controls playsInline />
                     ) : (
-                      <img src={media.url} alt={`Post ${i + 1}`} style={styles.carouselMedia} />
+                      <img src={media.url} alt={`Post ${i + 1}`} style={styles.carouselMedia} loading="lazy" />
                     )}
                   </div>
                 </SwiperSlide>
@@ -2291,7 +2291,7 @@ const Home = () => {
                           {allMedia[0].type === 'video' ? (
                             <video src={allMedia[0].url} style={styles.postImage} controls playsInline />
                           ) : (
-                            <img src={allMedia[0].url} alt="Post" style={styles.postImage} />
+                            <img src={allMedia[0].url} alt="Post" style={styles.postImage} loading="lazy" />
                           )}
                         </div>
                       )}
@@ -2311,7 +2311,7 @@ const Home = () => {
                                   {media.type === 'video' ? (
                                     <video src={media.url} style={styles.carouselMedia} controls playsInline />
                                   ) : (
-                                    <img src={media.url} alt={`Post ${i + 1}`} style={styles.carouselMedia} />
+                                    <img src={media.url} alt={`Post ${i + 1}`} style={styles.carouselMedia} loading="lazy" />
                                   )}
                                 </div>
                               </SwiperSlide>

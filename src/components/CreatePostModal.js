@@ -322,7 +322,7 @@ const CreatePostModal = () => {
           <button
             style={{
               ...styles.postButton,
-              opacity: (content.trim() || mediaFiles.length > 0 || links.length > 0) && !isUploading ? 1 : 0.5,
+              opacity: (content.trim() || mediaFiles.length > 0 || links.length > 0) ? 1 : 0.5,
             }}
             onClick={handlePost}
             disabled={(!content.trim() && mediaFiles.length === 0 && links.length === 0) || isUploading}

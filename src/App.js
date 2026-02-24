@@ -199,7 +199,7 @@ function AppContent() {
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   const [orgCodeVerified, setOrgCodeVerified] = useState(() =>
-    localStorage.getItem('org_code_verified') !== 'false'
+    localStorage.getItem('org_code_verified') === 'true'
   );
 
   // Check for signup confirmation in URL hash and redirect to email-confirmed page
@@ -343,6 +343,16 @@ function AppContent() {
     location.pathname === route || location.pathname.startsWith(route + '/')
   );
 
+  // Show organization code gate before anything else (no auth required)
+  if (!orgCodeVerified) {
+    return (
+      <OrganizationGate onVerified={() => {
+        localStorage.setItem('org_code_verified', 'true');
+        setOrgCodeVerified(true);
+      }} />
+    );
+  }
+
   if (loading) {
     return (
       <div style={{
@@ -372,16 +382,6 @@ function AppContent() {
   // Show offline screen when offline and on a non-allowed route
   if (isOffline && isAuthenticated && isProfileComplete && !isOfflineAllowed) {
     return <OfflineScreen />;
-  }
-
-  // Show organization code gate for authenticated users who haven't verified
-  if (isAuthenticated && isProfileComplete && !orgCodeVerified) {
-    return (
-      <OrganizationGate onVerified={() => {
-        localStorage.setItem('org_code_verified', 'true');
-        setOrgCodeVerified(true);
-      }} />
-    );
   }
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
+import { clear as clearIDB } from 'idb-keyval';
 import './onboarding.css';
 
 function Login() {
@@ -50,6 +51,32 @@ function Login() {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleLogin();
+    }
+  };
+
+  const handleClearCache = async () => {
+    try {
+      // Sign out of Supabase
+      await supabase.auth.signOut();
+      // Clear IndexedDB (cached auth/profile)
+      await clearIDB();
+      // Clear localStorage
+      localStorage.clear();
+      // Clear sessionStorage
+      sessionStorage.clear();
+      // Clear service worker caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      // Reload fresh
+      window.location.href = '/';
+    } catch (err) {
+      console.error('Error clearing cache:', err);
+      // Force reload even if something fails
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/';
     }
   };
 
@@ -129,6 +156,15 @@ function Login() {
           Sign up
         </button>
       </p>
+
+      <button
+        className="login-forgot-link"
+        onClick={handleClearCache}
+        disabled={isLoggingIn}
+        style={{ marginTop: '16px', fontSize: '12px', color: '#94a3b8' }}
+      >
+        Having trouble? Clear cache & reload
+      </button>
     </div>
   );
 }

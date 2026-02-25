@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAppSettings } from '../context/AppSettingsContext';
 import { useNavigate } from 'react-router-dom';
 import { App } from '@capacitor/app';
 
@@ -154,6 +155,7 @@ const ExternalLinkIcon = () => (
 
 const Profile = () => {
   const { signOut, resetIntake, userProfile, user } = useAuth();
+  const { settings, updateSetting } = useAppSettings();
   const navigate = useNavigate();
 
   // Check if user is owner
@@ -162,12 +164,12 @@ const Profile = () => {
   // Check if user is admin/editor
   const isAdmin = userProfile?.is_admin === true || userProfile?.role === 'admin' || userProfile?.role === 'editor';
 
-  // Visibility settings (owner only)
-  const [showChat, setShowChat] = useState(() => localStorage.getItem('showChat') !== 'false');
-  const [showDirectory, setShowDirectory] = useState(() => localStorage.getItem('showDirectory') !== 'false');
-  const [showAIShortcut, setShowAIShortcut] = useState(() => localStorage.getItem('showAIShortcut') !== 'false');
-  const [showFieldIntel, setShowFieldIntel] = useState(() => localStorage.getItem('showFieldIntel') !== 'false');
-  const [showUpdates, setShowUpdates] = useState(() => localStorage.getItem('showUpdates') !== 'false');
+  // Visibility settings from global app_settings (defaults to true)
+  const showChat = settings.show_chat !== false && settings.show_chat !== 'false';
+  const showDirectory = settings.show_directory !== false && settings.show_directory !== 'false';
+  const showAIShortcut = settings.show_ai_shortcut !== false && settings.show_ai_shortcut !== 'false';
+  const showFieldIntel = settings.show_field_intel !== false && settings.show_field_intel !== 'false';
+  const showUpdates = settings.show_updates !== false && settings.show_updates !== 'false';
   const [appVersion, setAppVersion] = useState('');
 
   // Get app version from native (Capacitor) or fallback
@@ -185,40 +187,11 @@ const Profile = () => {
   }, []);
 
 
-  const toggleChat = () => {
-    const newValue = !showChat;
-    setShowChat(newValue);
-    localStorage.setItem('showChat', String(newValue));
-    window.dispatchEvent(new Event('navVisibilityChange'));
-  };
-
-  const toggleDirectory = () => {
-    const newValue = !showDirectory;
-    setShowDirectory(newValue);
-    localStorage.setItem('showDirectory', String(newValue));
-    window.dispatchEvent(new Event('navVisibilityChange'));
-  };
-
-  const toggleAIShortcut = () => {
-    const newValue = !showAIShortcut;
-    setShowAIShortcut(newValue);
-    localStorage.setItem('showAIShortcut', String(newValue));
-    window.dispatchEvent(new Event('navVisibilityChange'));
-  };
-
-  const toggleFieldIntel = () => {
-    const newValue = !showFieldIntel;
-    setShowFieldIntel(newValue);
-    localStorage.setItem('showFieldIntel', String(newValue));
-    window.dispatchEvent(new Event('navVisibilityChange'));
-  };
-
-  const toggleUpdates = () => {
-    const newValue = !showUpdates;
-    setShowUpdates(newValue);
-    localStorage.setItem('showUpdates', String(newValue));
-    window.dispatchEvent(new Event('navVisibilityChange'));
-  };
+  const toggleChat = () => updateSetting('show_chat', !showChat);
+  const toggleDirectory = () => updateSetting('show_directory', !showDirectory);
+  const toggleAIShortcut = () => updateSetting('show_ai_shortcut', !showAIShortcut);
+  const toggleFieldIntel = () => updateSetting('show_field_intel', !showFieldIntel);
+  const toggleUpdates = () => updateSetting('show_updates', !showUpdates);
 
 
   const handleLogout = async () => {

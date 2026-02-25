@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { useAIChat } from '../context/AIChatContext';
 import { useChat } from '../context/ChatContext';
+import { useAppSettings } from '../context/AppSettingsContext';
 import { supabase } from '../config/supabase';
 
 // Icons
@@ -128,6 +129,7 @@ const BottomNav = () => {
   const { totalUnread } = useNotifications();
   const { openChat } = useAIChat();
   const { totalUnread: chatUnread } = useChat();
+  const { settings } = useAppSettings();
 
   // Check if user can create posts (admin or editor)
   const canCreatePosts = userProfile?.role === 'admin' || userProfile?.role === 'editor' || userProfile?.is_admin === true;
@@ -160,48 +162,35 @@ const BottomNav = () => {
     }
   };
 
-  // Get visibility settings from localStorage
-  const getChatVisible = () => localStorage.getItem('showChat') !== 'false';
-  const getDirectoryVisible = () => localStorage.getItem('showDirectory') !== 'false';
-  const getAIShortcutVisible = () => localStorage.getItem('showAIShortcut') !== 'false';
-  const getFieldIntelVisible = () => localStorage.getItem('showFieldIntel') !== 'false';
-  const getUpdatesVisible = () => localStorage.getItem('showUpdates') !== 'false';
-  const [showChat, setShowChat] = useState(getChatVisible);
-  const [showDirectory, setShowDirectory] = useState(getDirectoryVisible);
-  const [showAIShortcut, setShowAIShortcut] = useState(getAIShortcutVisible);
-  const [showFieldIntel, setShowFieldIntel] = useState(getFieldIntelVisible);
-  const [showUpdates, setShowUpdates] = useState(getUpdatesVisible);
-
-  // Listen for storage changes (from Profile page)
-  useEffect(() => {
-    const handleStorage = () => {
-      setShowChat(getChatVisible());
-      setShowDirectory(getDirectoryVisible());
-      setShowAIShortcut(getAIShortcutVisible());
-      setShowFieldIntel(getFieldIntelVisible());
-      setShowUpdates(getUpdatesVisible());
-    };
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('navVisibilityChange', handleStorage);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('navVisibilityChange', handleStorage);
-    };
-  }, []);
+  // Get visibility settings from global app_settings (defaults to true)
+  const showChat = settings.show_chat !== false && settings.show_chat !== 'false';
+  const showDirectory = settings.show_directory !== false && settings.show_directory !== 'false';
+  const showAIShortcut = settings.show_ai_shortcut !== false && settings.show_ai_shortcut !== 'false';
+  const showFieldIntel = settings.show_field_intel !== false && settings.show_field_intel !== 'false';
+  const showUpdates = settings.show_updates !== false && settings.show_updates !== 'false';
 
   // Main row items (shown in collapsed, becomes top when expanded)
-  const mainItems = [
+  // Collapsed row: 4 items + More button = 5
+  const collapsedItems = [
     { id: 'home', icon: HomeIcon, label: 'Home', path: '/home' },
     { id: 'library', icon: LibraryIcon, label: 'Library', path: '/library' },
     { id: 'create', icon: CreateIcon, label: 'Create', path: '/create', isCreate: true },
     { id: 'training', icon: TrainingIcon, label: 'Training', path: '/training' },
   ];
 
+  // Expanded top row: static core items
+  const mainItems = [
+    ...collapsedItems,
+    { id: 'forms', icon: FormsIcon, label: 'Forms', path: '/forms' },
+  ];
+
   // Secondary row items (only shown when expanded) - Profile always last
   const buildSecondaryItems = () => {
     const items = [];
 
-    items.push({ id: 'forms', icon: FormsIcon, label: 'Forms', path: '/forms' });
+    if (showUpdates) {
+      items.push({ id: 'updates', icon: UpdatesIcon, label: 'Updates', path: '/updates', hasBadge: totalUnread > 0 });
+    }
     if (showAIShortcut) {
       items.push({ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' });
     }
@@ -345,10 +334,9 @@ const BottomNav = () => {
               <span style={styles.closeLabel}>Close</span>
             </button>
 
-            {/* Top row (main items + Updates if enabled) */}
+            {/* Top row (static core items) */}
             <div style={styles.navRow}>
               {mainItems.map(renderTab)}
-              {showUpdates && renderUpdatesButton()}
             </div>
 
             {/* Bottom row (secondary items) */}
@@ -359,7 +347,7 @@ const BottomNav = () => {
         ) : (
           /* Collapsed: single row with More button */
           <div style={styles.navRow}>
-            {mainItems.map(renderTab)}
+            {collapsedItems.map(renderTab)}
             {renderMoreButton()}
           </div>
         )}

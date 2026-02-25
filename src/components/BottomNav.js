@@ -195,13 +195,13 @@ const BottomNav = () => {
     { id: 'library', icon: LibraryIcon, label: 'Library', path: '/library' },
     { id: 'create', icon: CreateIcon, label: 'Create', path: '/create', isCreate: true },
     { id: 'training', icon: TrainingIcon, label: 'Training', path: '/training' },
-    { id: 'forms', icon: FormsIcon, label: 'Forms', path: '/forms' },
   ];
 
   // Secondary row items (only shown when expanded) - Profile always last
   const buildSecondaryItems = () => {
     const items = [];
 
+    items.push({ id: 'forms', icon: FormsIcon, label: 'Forms', path: '/forms' });
     if (showAIShortcut) {
       items.push({ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' });
     }

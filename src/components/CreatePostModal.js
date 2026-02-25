@@ -331,6 +331,9 @@ const CreatePostModal = () => {
           </button>
         </div>
 
+        {/* Scrollable body - everything below header scrolls */}
+        <div style={styles.scrollBody}>
+
         {/* Author info */}
         <div style={styles.authorSection}>
           {userProfile?.profile_image_url ? (
@@ -559,6 +562,8 @@ const CreatePostModal = () => {
         {/* Bottom safe area */}
         <div style={{ height: 'calc(var(--safe-area-bottom, 0px) + 16px)' }} />
 
+        </div>{/* end scrollBody */}
+
         {/* Upload Progress Overlay */}
         {isUploading && (
           <div style={styles.uploadOverlay}>
@@ -740,11 +745,15 @@ const styles = {
     fontSize: '13px',
     color: '#64748b',
   },
-  contentArea: {
+  scrollBody: {
     flex: 1,
+    overflow: 'auto',
+    minHeight: 0,
+    WebkitOverflowScrolling: 'touch',
+  },
+  contentArea: {
     padding: '0 16px',
     minHeight: '120px',
-    overflow: 'auto',
   },
   textarea: {
     width: '100%',

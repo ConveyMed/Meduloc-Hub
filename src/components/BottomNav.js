@@ -131,8 +131,8 @@ const BottomNav = () => {
   const { totalUnread: chatUnread } = useChat();
   const { settings } = useAppSettings();
 
-  // Check if user can create posts (admin or editor)
-  const canCreatePosts = userProfile?.role === 'admin' || userProfile?.role === 'editor' || userProfile?.is_admin === true;
+  // Anyone can create posts in meduloc-hub
+  const canCreatePosts = true;
 
   // Check admin chat_mode setting
   useEffect(() => {

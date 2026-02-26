@@ -55,6 +55,8 @@
 	<string>This app accesses your photo library to select profile photos and images.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app saves photos to your library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Meduloc Hub may use your location to provide relevant content and notifications.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

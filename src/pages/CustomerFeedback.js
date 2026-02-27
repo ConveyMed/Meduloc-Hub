@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 const COGNITO_ACCOUNT_KEY = 'JOkoMoH77U6wAKhlS4IBiQ';
 const COGNITO_FORM_ID = '7';
 
 const CustomerFeedback = () => {
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  // Delay after iframe onLoad to let Cognito fully render its styles
+  const handleIframeLoad = useCallback(() => {
+    setTimeout(() => setReady(true), 1500);
+  }, []);
 
   return (
     <div style={styles.container}>
@@ -16,21 +21,25 @@ const CustomerFeedback = () => {
       </header>
 
       <div style={styles.content}>
-        {loading && (
+        {!ready && (
           <div style={styles.loader}>
             <div style={styles.spinner} />
             <p style={styles.loaderText}>Loading form...</p>
           </div>
         )}
-        <div style={styles.iframeWrapper}>
+        <div style={{
+          ...styles.iframeWrapper,
+          ...(!ready ? { height: 0, overflow: 'hidden' } : {}),
+        }}>
           <iframe
             src={`https://www.cognitoforms.com/f/${COGNITO_ACCOUNT_KEY}?id=${COGNITO_FORM_ID}`}
             style={{
               ...styles.iframe,
-              ...(loading ? { opacity: 0, position: 'absolute' } : {}),
+              opacity: ready ? 1 : 0,
+              transition: 'opacity 0.4s ease',
             }}
             title="Customer Feedback Form"
-            onLoad={() => setLoading(false)}
+            onLoad={handleIframeLoad}
             allow="payment"
             scrolling="yes"
           />

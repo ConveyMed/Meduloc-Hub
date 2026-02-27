@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-const COGNITO_ACCOUNT_KEY = 'JOkoMoH77U6wAKhlS4IBiQ';
+const COGNITO_ACCOUNT_KEY = 'aRKJwjhq_02CFQKr1wAgnw';
 const COGNITO_FORM_ID = '7';
 
 const CustomerFeedback = () => {

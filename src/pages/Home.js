@@ -1947,6 +1947,11 @@ const Home = () => {
   // Ref for the bell icon (for banner animation target)
   const bellRef = useRef(null);
 
+  // Refresh posts when Home mounts (navigating back to Home)
+  useEffect(() => {
+    refreshPosts();
+  }, [refreshPosts]);
+
   // Trigger notification banner on mount
   useEffect(() => {
     // Small delay to ensure everything is rendered

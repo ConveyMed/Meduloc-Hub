@@ -37,6 +37,7 @@ import ManageTraining from './pages/ManageTraining';
 import Forms from './pages/Forms';
 import ManageForms from './pages/ManageForms';
 import Resources from './pages/Resources';
+import CustomerFeedback from './pages/CustomerFeedback';
 import Updates from './pages/Updates';
 import ManageUpdates from './pages/ManageUpdates';
 import ManageAI from './pages/ManageAI';
@@ -494,20 +495,8 @@ function AppContent() {
                 ? <Navigate to="/profile-complete" replace />
                 : <AppShell showNav={showBottomNav}><DirectoryPermissions /></AppShell>
           } />
-          <Route path="/library" element={
-            !isAuthenticated
-              ? <Navigate to="/" replace />
-              : !isProfileComplete
-                ? <Navigate to="/profile-complete" replace />
-                : <AppShell showNav={showBottomNav}><Library /></AppShell>
-          } />
-          <Route path="/training" element={
-            !isAuthenticated
-              ? <Navigate to="/" replace />
-              : !isProfileComplete
-                ? <Navigate to="/profile-complete" replace />
-                : <AppShell showNav={showBottomNav}><Training /></AppShell>
-          } />
+          <Route path="/library" element={<Navigate to="/resources" replace />} />
+          <Route path="/training" element={<Navigate to="/resources" replace />} />
           <Route path="/manage-library" element={
             !isAuthenticated
               ? <Navigate to="/" replace />
@@ -542,6 +531,13 @@ function AppContent() {
               : !isProfileComplete
                 ? <Navigate to="/profile-complete" replace />
                 : <AppShell showNav={showBottomNav}><Resources /></AppShell>
+          } />
+          <Route path="/customer-feedback" element={
+            !isAuthenticated
+              ? <Navigate to="/" replace />
+              : !isProfileComplete
+                ? <Navigate to="/profile-complete" replace />
+                : <AppShell showNav={showBottomNav}><CustomerFeedback /></AppShell>
           } />
           <Route path="/updates" element={
             !isAuthenticated

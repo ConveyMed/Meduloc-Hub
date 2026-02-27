@@ -173,33 +173,28 @@ const BottomNav = () => {
   // Collapsed row: 4 items + More button = 5
   const collapsedItems = [
     { id: 'home', icon: HomeIcon, label: 'Home', path: '/home' },
-    { id: 'library', icon: LibraryIcon, label: 'Library', path: '/library' },
+    { id: 'feedback', icon: FormsIcon, label: 'Feedback', path: '/customer-feedback' },
     { id: 'create', icon: CreateIcon, label: 'Create', path: '/create', isCreate: true },
-    { id: 'training', icon: TrainingIcon, label: 'Training', path: '/training' },
+    { id: 'resources', icon: ResourcesIcon, label: 'Sales Tools', path: '/resources' },
   ];
 
   // Expanded top row: static core items
   const mainItems = [
     ...collapsedItems,
-    { id: 'forms', icon: FormsIcon, label: 'Forms', path: '/forms' },
+    ...(showAIShortcut ? [{ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' }] : []),
   ];
 
-  // Secondary row items (only shown when expanded) - Profile always last
+  // Secondary row items (only shown when expanded)
   const buildSecondaryItems = () => {
     const items = [];
 
-    if (showUpdates) {
-      items.push({ id: 'updates', icon: UpdatesIcon, label: 'Updates', path: '/updates', hasBadge: totalUnread > 0 });
-    }
-    if (showAIShortcut) {
-      items.push({ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' });
+    if (showFieldIntel) {
+      items.push({ id: 'field-intel', icon: FieldIntelIcon, label: 'Field Intel', path: '/field-intel' });
     }
     items.push({ id: 'downloads', icon: DownloadsIcon, label: 'Downloads', path: '/downloads' });
-
     if (showDirectory) {
       items.push({ id: 'directory', icon: DirectoryIcon, label: 'Directory', path: '/directory' });
     }
-    // Show chat only if enabled by admin AND user preference
     if (showChat && chatEnabledByAdmin) {
       items.push({ id: 'chat', icon: ChatIcon, label: 'Chat', path: '/chat', hasBadge: chatUnread > 0 });
     }

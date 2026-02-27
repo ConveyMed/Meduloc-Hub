@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const COGNITO_ACCOUNT_KEY = 'JOkoMoH77U6wAKhlS4IBiQ';
-const COGNITO_FORM_ID = '12';
+const COGNITO_FORM_ID = '7';
 
 const CustomerFeedback = () => {
   const [loading, setLoading] = useState(true);
@@ -19,16 +19,19 @@ const CustomerFeedback = () => {
             <p style={styles.loaderText}>Loading form...</p>
           </div>
         )}
-        <iframe
-          src={`https://www.cognitoforms.com/f/${COGNITO_ACCOUNT_KEY}?id=${COGNITO_FORM_ID}`}
-          style={{
-            ...styles.iframe,
-            ...(loading ? { opacity: 0 } : {}),
-          }}
-          title="Customer Feedback Form"
-          onLoad={() => setLoading(false)}
-          allow="payment"
-        />
+        <div style={styles.iframeWrapper}>
+          <iframe
+            src={`https://www.cognitoforms.com/f/${COGNITO_ACCOUNT_KEY}?id=${COGNITO_FORM_ID}`}
+            style={{
+              ...styles.iframe,
+              ...(loading ? { opacity: 0, position: 'absolute' } : {}),
+            }}
+            title="Customer Feedback Form"
+            onLoad={() => setLoading(false)}
+            allow="payment"
+            scrolling="yes"
+          />
+        </div>
       </div>
     </div>
   );
@@ -36,24 +39,23 @@ const CustomerFeedback = () => {
 
 const styles = {
   container: {
-    minHeight: '100%',
+    height: '100%',
     backgroundColor: '#f8fafc',
     display: 'flex',
     flexDirection: 'column',
+    overflow: 'hidden',
   },
   header: {
     width: '100%',
     backgroundColor: '#ffffff',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
+    flexShrink: 0,
     borderBottom: '2px solid rgba(30, 64, 175, 0.15)',
-    padding: '12px 16px',
+    padding: 'calc(12px + var(--safe-area-top, 0px)) 16px 12px 16px',
     textAlign: 'center',
   },
   headerTitle: {
     color: '#004B87',
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '700',
     margin: 0,
   },
@@ -61,13 +63,20 @@ const styles = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
+    minHeight: 0,
+  },
+  iframeWrapper: {
+    flex: 1,
+    overflow: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    paddingBottom: 'calc(80px + var(--safe-area-bottom, 0px))',
   },
   iframe: {
-    flex: 1,
     width: '100%',
+    height: '100%',
+    minHeight: '800px',
     border: 'none',
-    minHeight: 'calc(100vh - 120px)',
+    display: 'block',
   },
   loader: {
     display: 'flex',

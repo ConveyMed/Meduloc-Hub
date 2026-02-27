@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePosts } from '../context/PostsContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,34 +13,6 @@ const HomeIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
     <polyline points="9 22 9 12 15 12 15 22" />
-  </svg>
-);
-
-const LibraryIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
-
-const AIIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
-    <circle cx="8" cy="14" r="1" />
-    <circle cx="16" cy="14" r="1" />
-  </svg>
-);
-
-const TrainingIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-    <path d="M6 12v5c3 3 9 3 12 0v-5" />
-  </svg>
-);
-
-const ResourcesIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
   </svg>
 );
 
@@ -60,10 +32,32 @@ const CreateIcon = () => (
   </svg>
 );
 
+const ResourcesIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
 const UpdatesIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
+const FieldIntelIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
+const AIIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
+    <circle cx="8" cy="14" r="1" />
+    <circle cx="16" cy="14" r="1" />
   </svg>
 );
 
@@ -72,19 +66,6 @@ const DownloadsIcon = () => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
-const ProfileIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const ChatIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
 
@@ -97,14 +78,18 @@ const DirectoryIcon = () => (
   </svg>
 );
 
-const FieldIntelIcon = () => (
+const ChatIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="20" x2="18" y2="10" />
-    <line x1="12" y1="20" x2="12" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="14" />
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
 
+const ProfileIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
 
 const ChevronUpIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -120,7 +105,6 @@ const ChevronDownIcon = () => (
 
 const BottomNav = () => {
   const [expanded, setExpanded] = useState(false);
-  const [showNotAllowed, setShowNotAllowed] = useState(false);
   const [chatEnabledByAdmin, setChatEnabledByAdmin] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -131,9 +115,6 @@ const BottomNav = () => {
   const { totalUnread: chatUnread } = useChat();
   const { settings } = useAppSettings();
 
-  // Anyone can create posts in meduloc-hub
-  const canCreatePosts = true;
-
   // Check admin chat_mode setting
   useEffect(() => {
     const checkChatSetting = async () => {
@@ -143,81 +124,85 @@ const BottomNav = () => {
           .select('value')
           .eq('key', 'chat_mode')
           .single();
-        // chat_mode can be "off" or "all_members"
         setChatEnabledByAdmin(data?.value !== '"off"' && data?.value !== 'off');
       } catch {
-        // If setting doesn't exist, default to enabled
         setChatEnabledByAdmin(true);
       }
     };
     checkChatSetting();
   }, []);
 
-  const handleCreateClick = () => {
-    setExpanded(false); // Close expanded nav
-    if (canCreatePosts) {
-      openCreateModal();
-    } else {
-      setShowNotAllowed(true);
-    }
-  };
-
-  // Get visibility settings from global app_settings (defaults to true)
+  // Visibility settings from global app_settings (defaults to true)
   const showChat = settings.show_chat !== false && settings.show_chat !== 'false';
   const showDirectory = settings.show_directory !== false && settings.show_directory !== 'false';
   const showAIShortcut = settings.show_ai_shortcut !== false && settings.show_ai_shortcut !== 'false';
   const showFieldIntel = settings.show_field_intel !== false && settings.show_field_intel !== 'false';
   const showUpdates = settings.show_updates !== false && settings.show_updates !== 'false';
 
-  // Main row items (shown in collapsed, becomes top when expanded)
-  // Collapsed row: 4 items + More button = 5
-  const collapsedItems = [
-    { id: 'home', icon: HomeIcon, label: 'Home', path: '/home' },
-    { id: 'feedback', icon: FormsIcon, label: 'Feedback', path: '/customer-feedback' },
-    { id: 'create', icon: CreateIcon, label: 'Create', path: '/create', isCreate: true },
-    { id: 'resources', icon: ResourcesIcon, label: 'Sales Tools', path: '/resources' },
-  ];
-
-  // Expanded top row: static core items
-  const mainItems = [
-    ...collapsedItems,
-    ...(showAIShortcut ? [{ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' }] : []),
-  ];
-
-  // Secondary row items (only shown when expanded)
-  const buildSecondaryItems = () => {
+  // Master ordered list - items always maintain this relative order.
+  // Toggle-controlled items are filtered out when disabled.
+  // Profile is always last.
+  const allItems = useMemo(() => {
     const items = [];
 
+    // 1. Home (always)
+    items.push({ id: 'home', icon: HomeIcon, label: 'Home', path: '/home' });
+    // 2. Feedback (always)
+    items.push({ id: 'feedback', icon: FormsIcon, label: 'Feedback', path: '/customer-feedback' });
+    // 3. Create (always, special render)
+    items.push({ id: 'create', icon: CreateIcon, label: 'Create', path: '/create', isCreate: true });
+    // 4. Sales Tools (always)
+    items.push({ id: 'resources', icon: ResourcesIcon, label: 'Sales Tools', path: '/resources' });
+    // 5. Updates (toggle)
+    if (showUpdates) {
+      items.push({ id: 'updates', icon: UpdatesIcon, label: 'Updates', path: '/updates', hasBadge: totalUnread > 0 });
+    }
+    // 6. Field Intel (toggle)
     if (showFieldIntel) {
       items.push({ id: 'field-intel', icon: FieldIntelIcon, label: 'Field Intel', path: '/field-intel' });
     }
+    // 7. AI Agent (toggle)
+    if (showAIShortcut) {
+      items.push({ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' });
+    }
+    // 8. Downloads (always)
     items.push({ id: 'downloads', icon: DownloadsIcon, label: 'Downloads', path: '/downloads' });
+    // 9. Directory (toggle)
     if (showDirectory) {
       items.push({ id: 'directory', icon: DirectoryIcon, label: 'Directory', path: '/directory' });
     }
+    // 10. Chat (toggle)
     if (showChat && chatEnabledByAdmin) {
       items.push({ id: 'chat', icon: ChatIcon, label: 'Chat', path: '/chat', hasBadge: chatUnread > 0 });
     }
-    // Profile always last
+    // 11. Profile (always last)
     items.push({ id: 'profile', icon: ProfileIcon, label: 'Profile', path: '/profile' });
 
     return items;
-  };
+  }, [showUpdates, showFieldIntel, showAIShortcut, showDirectory, showChat, chatEnabledByAdmin, totalUnread, chatUnread]);
 
-  const secondaryItems = buildSecondaryItems();
+  // Split into rows
+  // Collapsed: first 4 items + More button
+  // Expanded: first 5 in row 1, rest in row 2
+  const collapsedItems = allItems.slice(0, 4);
+  const needsMore = allItems.length > 5;
+  const row1 = allItems.slice(0, 5);
+  const row2 = allItems.slice(5);
 
   const getActiveTab = () => {
     const path = location.pathname;
-    const allTabs = [...mainItems, ...secondaryItems, { id: 'updates', path: '/updates' }];
-    const tab = allTabs.find(t => t.path === path);
+    if (path.startsWith('/field-intel')) return 'field-intel';
+    const tab = allItems.find(t => t.path === path);
     return tab ? tab.id : 'home';
   };
 
   const activeTab = getActiveTab();
 
   const handleTabPress = (tab) => {
-    setExpanded(false); // Close expanded nav
-    if (tab.id === 'ai') {
+    setExpanded(false);
+    if (tab.isCreate) {
+      openCreateModal();
+    } else if (tab.id === 'ai') {
       openChat();
     } else {
       navigate(tab.path);
@@ -233,7 +218,7 @@ const BottomNav = () => {
         <div key={tab.id} style={styles.createBtnWrapper}>
           <button
             style={styles.createBtn}
-            onClick={handleCreateClick}
+            onClick={() => handleTabPress(tab)}
           >
             <Icon />
           </button>
@@ -268,10 +253,9 @@ const BottomNav = () => {
     );
   };
 
-  // More/Updates button for collapsed state
   const renderMoreButton = () => {
-    // Show badge on More if there are unread chats (and chat is enabled)
-    const hasUnreadChats = chatUnread > 0 && showChat && chatEnabledByAdmin;
+    const hiddenItems = allItems.slice(4);
+    const hasHiddenBadge = hiddenItems.some(item => item.hasBadge);
 
     return (
       <button
@@ -280,94 +264,55 @@ const BottomNav = () => {
       >
         <div style={{ ...styles.iconContainer, position: 'relative' }}>
           <ChevronUpIcon />
-          {hasUnreadChats && <div style={styles.badge} />}
+          {hasHiddenBadge && <div style={styles.badge} />}
         </div>
         <span style={styles.navLabel}>More</span>
       </button>
     );
   };
 
-  // Updates button for expanded state (replaces More in top row)
-  const renderUpdatesButton = () => {
-    const isActive = activeTab === 'updates';
-
-    return (
-      <button
-        style={{
-          ...styles.navBtn,
-          ...(isActive ? styles.navBtnActive : {}),
-        }}
-        onClick={() => { setExpanded(false); navigate('/updates'); }}
-      >
-        <div style={{
-          ...styles.iconContainer,
-          ...(isActive ? styles.iconContainerActive : {}),
-          position: 'relative',
-        }}>
-          <UpdatesIcon />
-          {totalUnread > 0 && <div style={styles.badge} />}
-        </div>
-        <span style={{
-          ...styles.navLabel,
-          ...(isActive ? styles.navLabelActive : {}),
-        }}>Updates</span>
-      </button>
-    );
-  };
-
   return (
-    <>
-      <nav style={styles.bottomNav}>
-        {expanded ? (
-          <>
-            {/* Close button - thin full-width bar at top */}
-            <button
-              style={styles.closeBar}
-              onClick={() => setExpanded(false)}
-            >
-              <ChevronDownIcon />
-              <span style={styles.closeLabel}>Close</span>
-            </button>
+    <nav style={styles.bottomNav}>
+      {expanded ? (
+        <>
+          {/* Close bar */}
+          <button
+            style={styles.closeBar}
+            onClick={() => setExpanded(false)}
+          >
+            <ChevronDownIcon />
+            <span style={styles.closeLabel}>Close</span>
+          </button>
 
-            {/* Top row (static core items) */}
-            <div style={styles.navRow}>
-              {mainItems.map(renderTab)}
-            </div>
-
-            {/* Bottom row (secondary items) */}
-            <div style={styles.navRow}>
-              {secondaryItems.map(renderTab)}
-            </div>
-          </>
-        ) : (
-          /* Collapsed: single row with More button */
+          {/* Row 1: first 5 items */}
           <div style={styles.navRow}>
-            {collapsedItems.map(renderTab)}
-            {renderMoreButton()}
+            {row1.map(renderTab)}
           </div>
-        )}
-      </nav>
 
-      {/* Not Allowed Modal */}
-      {showNotAllowed && (
-        <div style={styles.modalOverlay} onClick={() => setShowNotAllowed(false)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
+          {/* Row 2: remaining items, padded to 5 columns */}
+          {row2.length > 0 && (
+            <div style={styles.navRow}>
+              {row2.map(renderTab)}
+              {Array.from({ length: 5 - row2.length }).map((_, i) => (
+                <div key={`spacer-${i}`} style={styles.navBtn} />
+              ))}
             </div>
-            <h3 style={styles.modalTitle}>Cannot Create Posts</h3>
-            <p style={styles.modalText}>Only Editors and Administrators are able to post content.</p>
-            <button style={styles.modalBtn} onClick={() => setShowNotAllowed(false)}>
-              Got It
-            </button>
-          </div>
+          )}
+        </>
+      ) : (
+        /* Collapsed: first 4 + More (or all if 5 or fewer) */
+        <div style={styles.navRow}>
+          {needsMore ? (
+            <>
+              {collapsedItems.map(renderTab)}
+              {renderMoreButton()}
+            </>
+          ) : (
+            allItems.map(renderTab)
+          )}
         </div>
       )}
-    </>
+    </nav>
   );
 };
 
@@ -443,7 +388,7 @@ const styles = {
     transition: 'all 0.2s ease',
   },
   iconContainerActive: {
-    backgroundColor: 'rgba(30, 64, 175, 0.1)',
+    backgroundColor: 'rgba(0, 75, 135, 0.1)',
   },
   createBtnWrapper: {
     flex: '1 1 0',
@@ -463,7 +408,7 @@ const styles = {
     justifyContent: 'center',
     cursor: 'pointer',
     color: '#ffffff',
-    boxShadow: '0 2px 8px rgba(30, 64, 175, 0.3)',
+    boxShadow: '0 2px 8px rgba(0, 75, 135, 0.3)',
     transition: 'all 0.2s ease',
   },
   navLabel: {
@@ -483,61 +428,6 @@ const styles = {
     backgroundColor: '#ef4444',
     borderRadius: '50%',
     border: '2px solid #ffffff',
-  },
-  // Modal styles
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2000,
-    padding: '20px',
-  },
-  modal: {
-    backgroundColor: '#ffffff',
-    borderRadius: '16px',
-    padding: '24px',
-    maxWidth: '320px',
-    width: '100%',
-    textAlign: 'center',
-  },
-  modalIcon: {
-    width: '56px',
-    height: '56px',
-    borderRadius: '50%',
-    backgroundColor: '#f1f5f9',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 16px',
-  },
-  modalTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#1e293b',
-    margin: '0 0 8px 0',
-  },
-  modalText: {
-    fontSize: '14px',
-    color: '#64748b',
-    margin: '0 0 20px 0',
-    lineHeight: '1.5',
-  },
-  modalBtn: {
-    width: '100%',
-    padding: '12px 16px',
-    backgroundColor: '#004B87',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '10px',
-    fontSize: '15px',
-    fontWeight: '600',
-    cursor: 'pointer',
   },
 };
 

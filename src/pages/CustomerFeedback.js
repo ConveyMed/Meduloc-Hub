@@ -69,7 +69,7 @@ const styles = {
     flex: 1,
     overflow: 'auto',
     WebkitOverflowScrolling: 'touch',
-    paddingBottom: 'calc(80px + var(--safe-area-bottom, 0px))',
+    paddingBottom: 'calc(140px + var(--safe-area-bottom, 0px))',
   },
   iframe: {
     width: '100%',

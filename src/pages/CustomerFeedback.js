@@ -9,7 +9,10 @@ const CustomerFeedback = () => {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.headerTitle}>Customer Feedback</h1>
+        <div style={styles.headerInner}>
+          <h1 style={styles.headerTitle}>Customer Feedback</h1>
+        </div>
+        <div style={styles.headerBorder} />
       </header>
 
       <div style={styles.content}>
@@ -49,15 +52,30 @@ const styles = {
     width: '100%',
     backgroundColor: '#ffffff',
     flexShrink: 0,
-    borderBottom: '2px solid rgba(30, 64, 175, 0.15)',
-    padding: 'calc(12px + var(--safe-area-top, 0px)) 16px 12px 16px',
-    textAlign: 'center',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+  },
+  headerInner: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '12px 16px 8px 16px',
+    maxWidth: '600px',
+    margin: '0 auto',
   },
   headerTitle: {
     color: '#004B87',
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: '700',
     margin: 0,
+  },
+  headerBorder: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    height: '2px',
+    backgroundColor: 'rgba(30, 64, 175, 0.15)',
+    borderRadius: '1px',
   },
   content: {
     flex: 1,

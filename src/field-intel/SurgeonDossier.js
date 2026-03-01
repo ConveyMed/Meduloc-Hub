@@ -22,7 +22,6 @@ const SurgeonDossier = () => {
   const [cptPrices, setCptPrices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [autoTriggered, setAutoTriggered] = useState(false);
 
   useEffect(() => {
     if (!surgeonId) return;
@@ -66,12 +65,6 @@ const SurgeonDossier = () => {
     fetchAll();
   }, [surgeonId]);
 
-  // Auto-trigger AI profile generation if none exists
-  useEffect(() => {
-    if (!surgeon || profile || loading || autoTriggered) return;
-    setAutoTriggered(true);
-  }, [surgeon, profile, loading, autoTriggered]);
-
   const surgeonName = surgeon
     ? (surgeon.full_name || `${surgeon.first_name || ''} ${surgeon.last_name || ''}`.trim() || 'Unknown')
     : '';
@@ -110,16 +103,18 @@ const SurgeonDossier = () => {
       {surgeon?.specialty && <span style={styles.specialtyTag}>{surgeon.specialty}</span>}
 
       <div style={styles.sections}>
-        <ContactInfo surgeon={surgeon} />
-        <PracticeInfo surgeon={surgeon} />
+        <div style={styles.row}>
+          <ContactInfo surgeon={surgeon} />
+          <PracticeInfo surgeon={surgeon} />
+        </div>
         <ProcedureData surgeon={surgeon} cptData={cptData} cptPrices={cptPrices} />
-        <MarketIntel surgeon={surgeon} />
         <AIProfileSummary
           profile={profile}
           surgeonId={surgeonId}
           surgeonName={surgeonName}
           onProfileGenerated={(p) => setProfile(p)}
         />
+        <MarketIntel surgeon={surgeon} />
         <CallHistory
           callLogs={callLogs}
           surgeonId={surgeonId}
@@ -178,8 +173,12 @@ const styles = {
   sections: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '8px',
     paddingBottom: '32px',
+  },
+  row: {
+    display: 'flex',
+    gap: '8px',
   },
   loadingWrap: {
     display: 'flex',

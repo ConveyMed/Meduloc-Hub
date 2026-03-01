@@ -47,37 +47,51 @@ serve(async (req) => {
       surgeon.full_name ||
       `${surgeon.first_name || ""} ${surgeon.last_name || ""}`.trim();
     const location = [surgeon.city, surgeon.state].filter(Boolean).join(", ");
+    const institution = surgeon.hospital || "";
 
     console.log("Researching:", surgeonName, location);
 
-    // Build research prompt
-    const prompt = `Research the following physician and compile a professional profile. Use web search to find current, accurate information.
+    // Build research prompt - Medical Sales Intelligence Agent
+    const prompt = `# Role
+You are a Medical Sales Intelligence Agent. Your goal is to generate a concise "Pre-Call Flashcard" for a medical device sales representative. You focus on conversation starters, clinical pedigree, and high-value background intel.
 
-Physician: ${surgeonName}
+# INPUTS
+Physician Name: ${surgeonName}
 ${surgeon.npi ? `NPI: ${surgeon.npi}` : ""}
-${surgeon.specialty ? `Specialty: ${surgeon.specialty}` : ""}
-${location ? `Location: ${location}` : ""}
-${surgeon.hospital ? `Practice/Hospital: ${surgeon.hospital}` : ""}
+${surgeon.specialty ? `Medical Specialty: ${surgeon.specialty}` : ""}
+${institution ? `Institution: ${institution}` : ""}
+${location ? `City/Location: ${location}` : ""}
 
-Find and compile the following information. If you cannot find specific information, use null for that field. Be factual and concise.
+# Search Strategy
+1. Identify the Target: Find the physician's official bio on their practice or hospital website.
+2. Extract Education: specifically isolate Medical School, Residency, and Fellowship.
+3. Identify "Hooks": Look for personal details in the bio (hobbies, hometown, sports), specific clinical interests (e.g., "anterior hip approach," "robotic surgery"), or recent research themes.
+4. CMS Data: Generate the Open Payments search URL.
+
+# Output Rules
+- Format: Concise bullet points only. No long paragraphs.
+- Content: Only include what a sales rep can use to build rapport or qualify the target.
+- Only include verified, factual information.
+- Use null for any field where information is not found.
+- Do not fabricate or guess information.
+- Keep each field to 1-2 short sentences max.
 
 Respond in this exact JSON format:
 {
-  "summary": "A 2-3 sentence professional summary of this physician",
-  "medical_school": "Name of medical school and graduation year if available",
-  "residency": "Residency program and institution",
-  "fellowship": "Fellowship program and institution if applicable",
-  "research_interests": "Key research areas or clinical interests",
+  "summary": "2-3 sentence professional summary focused on what matters to a sales rep",
+  "medical_school": "School name and graduation year if available",
+  "residency": "Institution and program",
+  "fellowship": "Institution and specialty if applicable",
+  "clinical_specialties": "3-4 specific focus areas, e.g. Sports Medicine, Joint Replacement",
+  "key_procedures": "Specific techniques mentioned, e.g. MAKO Robotics, Minimally Invasive Spine",
+  "research_interests": "1-2 keywords on what they study",
+  "ice_breakers": "Personal hobbies, community roles, fun facts, hometown, sports. If none found, use 'Standard professional bio only.'",
   "publications": "Notable publications or publication count",
   "healthgrades_score": "Healthgrades rating if available (e.g. 4.5/5)",
-  "news_pr": "Any recent news, awards, or notable mentions"
-}
-
-Important:
-- Only include verified, factual information
-- Use null for any field where information is not found
-- Keep each field concise (1-2 sentences max)
-- Do not fabricate or guess information`;
+  "news_pr": "Any recent awards, unique leadership roles, or notable mentions",
+  "cms_url": "https://openpaymentsdata.cms.gov/search",
+  "source_url": "Link to the primary bio source used"
+}`;
 
     // Call Gemini with web grounding
     const geminiResponse = await fetch(
@@ -90,7 +104,7 @@ Important:
           tools: [{ google_search: {} }],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
           },
         }),
       }
@@ -128,17 +142,32 @@ Important:
       profileData = { summary: responseText.slice(0, 500) };
     }
 
+    // Clean "null" strings to actual null
+    const clean = (v: unknown) => {
+      if (v == null) return null;
+      if (typeof v === "string") {
+        const t = v.trim().toLowerCase();
+        if (t === "null" || t === "n/a" || t === "none" || t === "") return null;
+      }
+      return v as string;
+    };
+
     // Upsert to physician_profiles
     const profileRow = {
       surgeon_id,
-      summary: profileData.summary || null,
-      medical_school: profileData.medical_school || null,
-      residency: profileData.residency || null,
-      fellowship: profileData.fellowship || null,
-      research_interests: profileData.research_interests || null,
-      publications: profileData.publications || null,
-      healthgrades_score: profileData.healthgrades_score || null,
-      news_pr: profileData.news_pr || null,
+      summary: clean(profileData.summary),
+      medical_school: clean(profileData.medical_school),
+      residency: clean(profileData.residency),
+      fellowship: clean(profileData.fellowship),
+      research_interests: clean(profileData.research_interests),
+      publications: clean(profileData.publications),
+      healthgrades_score: clean(profileData.healthgrades_score),
+      news_pr: clean(profileData.news_pr),
+      ice_breakers: clean(profileData.ice_breakers),
+      key_procedures: clean(profileData.key_procedures),
+      clinical_specialties: clean(profileData.clinical_specialties),
+      cms_url: clean(profileData.cms_url),
+      source_url: clean(profileData.source_url),
       updated_at: new Date().toISOString(),
     };
 

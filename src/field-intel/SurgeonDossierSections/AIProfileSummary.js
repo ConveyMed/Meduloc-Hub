@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../config/supabase';
 
 const AIProfileSummary = ({ profile, surgeonId, surgeonName, onProfileGenerated }) => {
@@ -26,13 +26,19 @@ const AIProfileSummary = ({ profile, surgeonId, surgeonName, onProfileGenerated 
     }
   };
 
-  // Loading state
+  // Auto-trigger on load if no profile exists
+  useEffect(() => {
+    if (!profile && surgeonId && !loading) {
+      generateProfile();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) {
     return (
       <div style={styles.card}>
         <div style={styles.header}>
           <BrainIcon />
-          <h3 style={styles.title}>AI Physician Profile</h3>
+          <h3 style={styles.title}>Profile Summary</h3>
         </div>
         <div style={styles.loadingWrap}>
           <div style={styles.spinner} />
@@ -43,100 +49,101 @@ const AIProfileSummary = ({ profile, surgeonId, surgeonName, onProfileGenerated 
     );
   }
 
-  // No profile yet
-  if (!profile) {
+  if (error) {
     return (
       <div style={styles.card}>
         <div style={styles.header}>
           <BrainIcon />
-          <h3 style={styles.title}>AI Physician Profile</h3>
+          <h3 style={styles.title}>Profile Summary</h3>
         </div>
-        {error && (
-          <div style={styles.errorBanner}>
-            <span style={styles.errorText}>{error}</span>
-          </div>
-        )}
-        <button onClick={generateProfile} style={styles.generateBtn}>
-          <BrainIcon color="#ffffff" size={16} />
-          Generate AI Profile
-        </button>
-        <p style={styles.hint}>Uses AI with web search to compile physician background, education, publications, and online presence.</p>
+        <div style={styles.errorBanner}>
+          <span style={styles.errorText}>{error}</span>
+        </div>
+        <button onClick={generateProfile} style={styles.retryBtn}>Retry</button>
       </div>
     );
   }
 
-  // Profile exists - render it
+  if (!profile) return null;
+
+  const hasValue = (v) => v && v.trim().toLowerCase() !== 'null' && v.trim().toLowerCase() !== 'n/a';
+
+  const pedigree = [
+    { label: 'Medical School', value: profile.medical_school },
+    { label: 'Residency', value: profile.residency },
+    { label: 'Fellowship', value: profile.fellowship },
+  ].filter((d) => hasValue(d.value));
+
+  const intel = [
+    { label: 'Specialties', value: profile.clinical_specialties },
+    { label: 'Key Procedures', value: profile.key_procedures },
+    { label: 'Research', value: profile.research_interests },
+    { label: 'Publications', value: profile.publications },
+    { label: 'Healthgrades', value: profile.healthgrades_score },
+    { label: 'Ice Breakers', value: profile.ice_breakers },
+    { label: 'News / PR', value: profile.news_pr },
+  ].filter((d) => hasValue(d.value));
+
   return (
     <div style={styles.card}>
       <div style={styles.header}>
         <BrainIcon />
-        <h3 style={styles.title}>AI Physician Profile</h3>
+        <h3 style={styles.title}>Profile Summary</h3>
         <span style={styles.cachedBadge}>Cached</span>
       </div>
 
       {profile.summary && (
+        <p style={styles.summary}>{profile.summary}</p>
+      )}
+
+      {pedigree.length > 0 && (
         <div style={styles.section}>
-          <p style={styles.summary}>{profile.summary}</p>
+          <span style={styles.sectionLabel}>Pedigree</span>
+          <div style={styles.detailsGrid}>
+            {pedigree.map((d) => (
+              <div key={d.label} style={styles.detailRow}>
+                <span style={styles.detailLabel}>{d.label}</span>
+                <span style={styles.detailValue}>{d.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <div style={styles.detailsGrid}>
-        {profile.medical_school && (
-          <div style={styles.field}>
-            <span style={styles.label}>Medical School</span>
-            <span style={styles.value}>{profile.medical_school}</span>
+      {intel.length > 0 && (
+        <div style={styles.section}>
+          <span style={styles.sectionLabel}>Clinical Intel</span>
+          <div style={styles.detailsGrid}>
+            {intel.map((d) => (
+              <div key={d.label} style={styles.detailRow}>
+                <span style={styles.detailLabel}>{d.label}</span>
+                <span style={styles.detailValue}>{d.value}</span>
+              </div>
+            ))}
           </div>
+        </div>
+      )}
+
+      <div style={styles.footer}>
+        {profile.source_url && (
+          <a href={profile.source_url} target="_blank" rel="noopener noreferrer" style={styles.footerLink}>Source</a>
         )}
-        {profile.residency && (
-          <div style={styles.field}>
-            <span style={styles.label}>Residency</span>
-            <span style={styles.value}>{profile.residency}</span>
-          </div>
+        {profile.cms_url && (
+          <a href={profile.cms_url} target="_blank" rel="noopener noreferrer" style={styles.footerLink}>CMS Open Payments</a>
         )}
-        {profile.fellowship && (
-          <div style={styles.field}>
-            <span style={styles.label}>Fellowship</span>
-            <span style={styles.value}>{profile.fellowship}</span>
-          </div>
-        )}
-        {profile.research_interests && (
-          <div style={styles.field}>
-            <span style={styles.label}>Research Interests</span>
-            <span style={styles.value}>{profile.research_interests}</span>
-          </div>
-        )}
-        {profile.publications && (
-          <div style={styles.field}>
-            <span style={styles.label}>Publications</span>
-            <span style={styles.value}>{profile.publications}</span>
-          </div>
-        )}
-        {profile.healthgrades_score && (
-          <div style={styles.field}>
-            <span style={styles.label}>Healthgrades Score</span>
-            <span style={styles.value}>{profile.healthgrades_score}</span>
-          </div>
-        )}
-        {profile.news_pr && (
-          <div style={styles.field}>
-            <span style={styles.label}>News / PR</span>
-            <span style={styles.value}>{profile.news_pr}</span>
-          </div>
+        {profile.updated_at && (
+          <span style={styles.timestamp}>
+            Updated: {new Date(profile.updated_at).toLocaleDateString('en-US', {
+              year: 'numeric', month: 'short', day: 'numeric',
+            })}
+          </span>
         )}
       </div>
-
-      {profile.updated_at && (
-        <span style={styles.timestamp}>
-          Last updated: {new Date(profile.updated_at).toLocaleDateString('en-US', {
-            year: 'numeric', month: 'short', day: 'numeric',
-          })}
-        </span>
-      )}
     </div>
   );
 };
 
-const BrainIcon = ({ color = '#1e3a8a', size = 18 }) => (
+const BrainIcon = ({ color = '#1e3a8a', size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5c0 1.58.67 3 1.74 4.01L12 18l6.26-6.49A5.48 5.48 0 0 0 20 7.5 5.5 5.5 0 0 0 14.5 2 5.5 5.5 0 0 0 12 2.84 5.5 5.5 0 0 0 9.5 2z" />
     <path d="M12 18v4" />
@@ -147,127 +154,136 @@ const styles = {
   card: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '16px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    borderRadius: '10px',
+    padding: '12px',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.06)',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginBottom: '14px',
+    gap: '6px',
+    marginBottom: '8px',
   },
   title: {
-    fontSize: '15px',
+    fontSize: '13px',
     fontWeight: '700',
     color: '#1e293b',
     margin: 0,
     flex: 1,
   },
   cachedBadge: {
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: '600',
     color: '#15803d',
     backgroundColor: '#f0fdf4',
-    padding: '2px 8px',
+    padding: '1px 6px',
     borderRadius: '4px',
   },
   loadingWrap: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '10px',
-    padding: '24px 0',
+    gap: '8px',
+    padding: '16px 0',
   },
   spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #e2e8f0',
-    borderTop: '3px solid #1e3a8a',
+    width: '24px',
+    height: '24px',
+    border: '2px solid #e2e8f0',
+    borderTop: '2px solid #1e3a8a',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
   loadingText: {
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '600',
     color: '#1e293b',
   },
   loadingHint: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#94a3b8',
   },
   errorBanner: {
     backgroundColor: '#fef2f2',
     border: '1px solid #fecaca',
-    borderRadius: '8px',
-    padding: '10px 12px',
-    marginBottom: '12px',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    marginBottom: '8px',
   },
   errorText: {
-    fontSize: '13px',
+    fontSize: '12px',
     color: '#b91c1c',
   },
-  generateBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    width: '100%',
-    padding: '12px',
+  retryBtn: {
+    padding: '4px 10px',
     backgroundColor: '#1e3a8a',
     color: '#ffffff',
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
+    borderRadius: '4px',
+    fontSize: '11px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  hint: {
-    fontSize: '12px',
-    color: '#94a3b8',
-    textAlign: 'center',
-    margin: '10px 0 0 0',
-    lineHeight: '1.4',
-  },
-  section: {
-    marginBottom: '14px',
   },
   summary: {
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#334155',
-    lineHeight: '1.6',
-    margin: 0,
+    lineHeight: '1.5',
+    margin: '0 0 8px 0',
+  },
+  section: {
+    marginBottom: '6px',
+  },
+  sectionLabel: {
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#1e3a8a',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    display: 'block',
+    marginBottom: '3px',
+    paddingTop: '6px',
+    borderTop: '1px solid #f1f5f9',
   },
   detailsGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
     gap: '2px',
   },
-  label: {
+  detailRow: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'baseline',
+  },
+  detailLabel: {
     fontSize: '11px',
     fontWeight: '600',
     color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    minWidth: '90px',
+    flexShrink: 0,
   },
-  value: {
-    fontSize: '14px',
-    color: '#1e293b',
+  detailValue: {
+    fontSize: '12px',
+    color: '#475569',
+    lineHeight: '1.4',
+  },
+  footer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginTop: '8px',
+    paddingTop: '6px',
+    borderTop: '1px solid #f1f5f9',
+  },
+  footerLink: {
+    fontSize: '11px',
+    color: '#1e3a8a',
     fontWeight: '500',
-    lineHeight: '1.5',
+    textDecoration: 'none',
   },
   timestamp: {
-    display: 'block',
-    fontSize: '11px',
+    fontSize: '10px',
     color: '#94a3b8',
-    marginTop: '14px',
-    textAlign: 'right',
+    marginLeft: 'auto',
   },
 };
 

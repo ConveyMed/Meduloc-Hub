@@ -37,7 +37,7 @@ const PracticeInfo = ({ surgeon }) => {
 };
 
 const PracticeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
     <polyline points="9 22 9 12 15 12 15 22" />
   </svg>
@@ -47,18 +47,20 @@ const styles = {
   card: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '16px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    borderRadius: '10px',
+    padding: '12px',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.06)',
+    flex: 1,
+    minWidth: 0,
   },
   header: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginBottom: '14px',
+    gap: '6px',
+    marginBottom: '8px',
   },
   title: {
-    fontSize: '15px',
+    fontSize: '13px',
     fontWeight: '700',
     color: '#1e293b',
     margin: 0,
@@ -66,22 +68,22 @@ const styles = {
   grid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '4px',
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
+    gap: '1px',
   },
   label: {
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: '600',
     color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   value: {
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#1e293b',
     fontWeight: '500',
   },

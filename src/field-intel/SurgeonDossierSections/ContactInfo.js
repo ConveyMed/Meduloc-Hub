@@ -75,7 +75,7 @@ const ContactInfo = ({ surgeon }) => {
 };
 
 const ContactIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
   </svg>
 );
@@ -84,18 +84,20 @@ const styles = {
   card: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    padding: '16px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    borderRadius: '10px',
+    padding: '12px',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.06)',
+    flex: 1,
+    minWidth: 0,
   },
   header: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginBottom: '14px',
+    gap: '6px',
+    marginBottom: '8px',
   },
   title: {
-    fontSize: '15px',
+    fontSize: '13px',
     fontWeight: '700',
     color: '#1e293b',
     margin: 0,
@@ -103,27 +105,27 @@ const styles = {
   grid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '4px',
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
+    gap: '1px',
   },
   label: {
-    fontSize: '11px',
+    fontSize: '10px',
     fontWeight: '600',
     color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   value: {
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#1e293b',
     fontWeight: '500',
   },
   link: {
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#1e3a8a',
     fontWeight: '500',
     textDecoration: 'none',

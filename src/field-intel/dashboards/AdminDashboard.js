@@ -47,7 +47,6 @@ const AdminDashboard = () => {
   const [totalCallLogs, setTotalCallLogs] = useState(0);
   const [pendingLeads, setPendingLeads] = useState(0);
   const [regions, setRegions] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -107,14 +106,6 @@ const AdminDashboard = () => {
         }));
 
         setRegions(regionSummaries);
-
-        // Recent activity
-        const { data: calls } = await supabase
-          .from('call_logs')
-          .select('*, surgeon:surgeons(full_name, first_name, last_name), rep:users!call_logs_user_id_fkey(first_name, last_name)')
-          .order('call_date', { ascending: false })
-          .limit(20);
-        setRecentActivity(calls || []);
       } catch (err) {
         console.error('[AdminDashboard] Error:', err);
       } finally {
@@ -143,13 +134,6 @@ const AdminDashboard = () => {
     { label: 'Regions', value: regions.length, color: '#d97706', icon: <GlobeIcon /> },
   ];
 
-  const quickLinks = [
-    { label: 'Database', path: '/field-intel/database' },
-    { label: 'Settings', path: '/field-intel/settings' },
-    { label: 'Lead Queue', path: '/field-intel/leads' },
-    { label: 'Custom Fields', path: '/field-intel/settings/custom-fields' },
-  ];
-
   return (
     <div style={styles.container}>
       <h2 style={styles.pageTitle}>Admin Dashboard</h2>
@@ -168,23 +152,6 @@ const AdminDashboard = () => {
           <ArrowRightIcon />
         </button>
       )}
-
-      {/* Quick Links */}
-      <div style={styles.section}>
-        <span style={styles.sectionTitle}>Quick Links</span>
-        <div style={styles.linksGrid}>
-          {quickLinks.map(link => (
-            <button
-              key={link.path}
-              onClick={() => navigate(link.path)}
-              style={styles.linkCard}
-            >
-              <span style={styles.linkLabel}>{link.label}</span>
-              <ArrowRightIcon />
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Region Summary Cards */}
       {regions.length > 0 && (
@@ -211,46 +178,6 @@ const AdminDashboard = () => {
                 </div>
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Activity Feed */}
-      {recentActivity.length > 0 && (
-        <div style={styles.section}>
-          <span style={styles.sectionTitle}>Recent Activity</span>
-          <div style={styles.cardList}>
-            {recentActivity.map(call => {
-              const surgeonName = call.surgeon
-                ? (call.surgeon.full_name || `${call.surgeon.first_name || ''} ${call.surgeon.last_name || ''}`.trim())
-                : 'Unknown';
-              const repName = call.rep
-                ? `${call.rep.first_name || ''} ${call.rep.last_name || ''}`.trim()
-                : '';
-
-              return (
-                <button
-                  key={call.id}
-                  onClick={() => navigate(`/field-intel/dossier/${call.surgeon_id}`)}
-                  style={styles.activityRow}
-                >
-                  <div style={styles.activityHeader}>
-                    <span style={styles.activitySurgeon}>{surgeonName}</span>
-                    <span style={styles.activityDate}>
-                      {new Date(call.call_date).toLocaleDateString('en-US', {
-                        month: 'short', day: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                  {repName && <span style={styles.activityRep}>{repName}</span>}
-                  {call.summary && (
-                    <span style={styles.activitySummary}>
-                      {call.summary.length > 80 ? call.summary.slice(0, 80) + '...' : call.summary}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       )}
@@ -323,28 +250,6 @@ const styles = {
     fontWeight: '600',
     color: '#475569',
   },
-  linksGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '8px',
-  },
-  linkCard: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 14px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    textAlign: 'left',
-    color: '#1e3a8a',
-  },
-  linkLabel: {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#1e3a8a',
-  },
   cardList: {
     display: 'flex',
     flexDirection: 'column',
@@ -386,41 +291,6 @@ const styles = {
   regionVP: {
     fontSize: '12px',
     color: '#94a3b8',
-  },
-  activityRow: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-    padding: '12px 14px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    textAlign: 'left',
-    width: '100%',
-  },
-  activityHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  activitySurgeon: {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  activityDate: {
-    fontSize: '12px',
-    color: '#64748b',
-  },
-  activityRep: {
-    fontSize: '12px',
-    color: '#94a3b8',
-  },
-  activitySummary: {
-    fontSize: '12px',
-    color: '#334155',
-    lineHeight: '1.4',
   },
 };
 

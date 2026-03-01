@@ -21,20 +21,20 @@ const AccountSelector = ({
     setDisplayCount(DISPLAY_CHUNK);
   }
 
-  const allSelected = accounts.length > 0 && accounts.every(a => selectedIds.includes(a.id));
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allSelected = accounts.length > 0 && accounts.every(a => selectedSet.has(a.id));
   const someSelected = selectedIds.length > 0 && !allSelected;
 
   const toggleAll = () => {
     if (allSelected) {
       onSelectionChange([]);
     } else {
-      // Select ALL filtered accounts, not just displayed
       onSelectionChange(accounts.map(a => a.id));
     }
   };
 
   const toggleOne = (id) => {
-    if (selectedIds.includes(id)) {
+    if (selectedSet.has(id)) {
       onSelectionChange(selectedIds.filter(sid => sid !== id));
     } else {
       onSelectionChange([...selectedIds, id]);
@@ -113,7 +113,7 @@ const AccountSelector = ({
           </div>
         )}
         {visible.map((acct) => {
-          const checked = selectedIds.includes(acct.id);
+          const checked = selectedSet.has(acct.id);
           const assignedTo = showAssignedTo ? delegationMap[acct.id] : null;
           return (
             <button
@@ -281,8 +281,6 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    maxHeight: '400px',
-    overflowY: 'auto',
   },
   emptyState: {
     display: 'flex',

@@ -8,7 +8,7 @@ const DISPLAY_CHUNK = 100;
 
 const SurgeonList = () => {
   const { user } = useAuth();
-  const { role } = useFieldIntel();
+  const { role, allowedRegionIds } = useFieldIntel();
   const navigate = useNavigate();
 
   const [surgeons, setSurgeons] = useState([]);
@@ -26,13 +26,43 @@ const SurgeonList = () => {
       try {
         let surgeonData = [];
 
-        // All roles: query surgeons directly (RLS now allows universal read)
-        const { data, error } = await supabase
-          .from('surgeons')
-          .select('*')
-          .order('full_name');
-        if (error) throw error;
-        surgeonData = data || [];
+        if (role === 'admin') {
+          // Admin sees all
+          const { data, error } = await supabase
+            .from('surgeons')
+            .select('*')
+            .order('full_name');
+          if (error) throw error;
+          surgeonData = data || [];
+        } else if (allowedRegionIds.length === 0) {
+          // VP/Manager/Rep with no regions assigned to their VP = no surgeons
+          surgeonData = [];
+        } else {
+          // Filter by VP's regions
+          const { data: srData } = await supabase
+            .from('surgeon_regions')
+            .select('surgeon_id')
+            .in('region_id', allowedRegionIds);
+          const surgeonIds = [...new Set((srData || []).map(r => r.surgeon_id))];
+
+          if (surgeonIds.length === 0) {
+            surgeonData = [];
+          } else {
+            // Fetch in batches to avoid URL length limits
+            const SZ = 500;
+            for (let i = 0; i < surgeonIds.length; i += SZ) {
+              const batch = surgeonIds.slice(i, i + SZ);
+              const { data, error } = await supabase
+                .from('surgeons')
+                .select('*')
+                .in('id', batch)
+                .order('full_name');
+              if (error) throw error;
+              surgeonData = surgeonData.concat(data || []);
+            }
+            surgeonData.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+          }
+        }
 
         setSurgeons(surgeonData);
 
@@ -55,7 +85,7 @@ const SurgeonList = () => {
     };
 
     fetchSurgeons();
-  }, [user?.id, role]);
+  }, [user?.id, role, allowedRegionIds]);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return surgeons;

@@ -35,9 +35,7 @@ const BATCH_SIZE = 500;
 const RegionAccountAssigner = () => {
   const navigate = useNavigate();
   const [regions, setRegions] = useState([]);
-  const [selectedRegionId, setSelectedRegionId] = useState(null);
-  const [browseMode, setBrowseMode] = useState(false); // true = viewing all data, no region selected
-  const [mode, setMode] = useState('add');
+  const [selectedRegionId, setSelectedRegionId] = useState(null); // null = Unassigned tab
   const [accounts, setAccounts] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +45,12 @@ const RegionAccountAssigner = () => {
   const [cptMap, setCptMap] = useState({});
   const [showCreateRegion, setShowCreateRegion] = useState(false);
   const [newRegionName, setNewRegionName] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Action bar state
+  const [actionType, setActionType] = useState(null); // 'assign' | 'reassign' | null
+  const [targetRegionId, setTargetRegionId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
@@ -55,19 +59,13 @@ const RegionAccountAssigner = () => {
   const [filterCities, setFilterCities] = useState([]);
   const [filterSites, setFilterSites] = useState([]);
 
+  const isUnassignedTab = selectedRegionId === null;
+
   // Fetch regions on mount
   useEffect(() => {
     const fetchRegions = async () => {
       const { data } = await supabase.from('regions').select('*').order('name');
-      if (data && data.length > 0) {
-        setRegions(data);
-        setSelectedRegionId(data[0].id);
-        setBrowseMode(false);
-      } else {
-        // No regions yet -- start in browse mode
-        setBrowseMode(true);
-      }
-      setLoading(false);
+      if (data) setRegions(data);
     };
     fetchRegions();
   }, []);
@@ -86,82 +84,91 @@ const RegionAccountAssigner = () => {
     }
     setRegions(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
     setSelectedRegionId(data.id);
-    setBrowseMode(false);
     setNewRegionName('');
     setShowCreateRegion(false);
   };
 
-  // Fetch accounts -- browse mode shows all, region mode filters
+  // Fetch accounts + CPT data together
   useEffect(() => {
-    if (!browseMode && !selectedRegionId) return;
-
-    const fetchAccounts = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       setSelectedIds([]);
+      setActionType(null);
+      setTargetRegionId(null);
 
-      let assignedIds = new Set();
-      if (!browseMode && selectedRegionId) {
-        const { data: assigned } = await supabase
-          .from('surgeon_regions')
-          .select('surgeon_id')
-          .eq('region_id', selectedRegionId);
-        assignedIds = new Set((assigned || []).map(r => r.surgeon_id));
-      }
-
-      // Paginate surgeons -- Supabase defaults to 1000 rows
-      let allSurgeons = [];
-      let offset = 0;
       const SZ = 1000;
-      while (true) {
-        const { data } = await supabase
-          .from('surgeons')
-          .select('id, full_name, first_name, last_name, npi, specialty, city, state, site_of_care')
-          .order('full_name')
-          .range(offset, offset + SZ - 1);
-        if (!data || data.length === 0) break;
-        allSurgeons = allSurgeons.concat(data);
-        if (data.length < SZ) break;
-        offset += SZ;
-      }
 
-      if (browseMode) {
-        setAccounts(allSurgeons);
-      } else if (mode === 'add') {
-        setAccounts(allSurgeons.filter(s => !assignedIds.has(s.id)));
-      } else {
-        setAccounts(allSurgeons.filter(s => assignedIds.has(s.id)));
-      }
+      // Fetch surgeons, CPT data, and prices in parallel
+      const surgeonsPromise = (async () => {
+        let all = [];
+        let offset = 0;
+        while (true) {
+          const { data } = await supabase
+            .from('surgeons')
+            .select('id, full_name, first_name, last_name, npi, specialty, city, state, site_of_care')
+            .order('full_name')
+            .range(offset, offset + SZ - 1);
+          if (!data || data.length === 0) break;
+          all = all.concat(data);
+          if (data.length < SZ) break;
+          offset += SZ;
+        }
+        return all;
+      })();
 
-      setLoading(false);
-    };
+      const assignmentsPromise = (async () => {
+        if (isUnassignedTab) {
+          let all = [];
+          let offset = 0;
+          while (true) {
+            const { data } = await supabase
+              .from('surgeon_regions')
+              .select('surgeon_id')
+              .range(offset, offset + SZ - 1);
+            if (!data || data.length === 0) break;
+            all = all.concat(data);
+            if (data.length < SZ) break;
+            offset += SZ;
+          }
+          return all;
+        } else {
+          const { data } = await supabase
+            .from('surgeon_regions')
+            .select('surgeon_id')
+            .eq('region_id', selectedRegionId);
+          return data || [];
+        }
+      })();
 
-    fetchAccounts();
-  }, [selectedRegionId, mode, browseMode]);
+      const cptPromise = (async () => {
+        let all = [];
+        let offset = 0;
+        while (true) {
+          const { data } = await supabase
+            .from('surgeon_cpt_data')
+            .select('surgeon_id, cpt_code, annual_volume')
+            .range(offset, offset + SZ - 1);
+          if (!data || data.length === 0) break;
+          all = all.concat(data);
+          if (data.length < SZ) break;
+          offset += SZ;
+        }
+        return all;
+      })();
 
-  // Fetch CPT data + prices to enrich accounts with volume/market potential
-  useEffect(() => {
-    if (accounts.length === 0) { setCptMap({}); return; }
+      const pricesPromise = supabase.from('cpt_prices').select('cpt_code, average_price');
 
-    const fetchCptData = async () => {
-      // Fetch all CPT data and prices (no ID filter -- avoids URL length limit with 10K+ accounts)
-      // Fetch all CPT rows -- Supabase defaults to 1000, so paginate
-      let allCptRows = [];
-      let cptOffset = 0;
-      const PAGE = 1000;
-      while (true) {
-        const { data } = await supabase
-          .from('surgeon_cpt_data')
-          .select('surgeon_id, cpt_code, annual_volume')
-          .range(cptOffset, cptOffset + PAGE - 1);
-        if (!data || data.length === 0) break;
-        allCptRows = allCptRows.concat(data);
-        if (data.length < PAGE) break;
-        cptOffset += PAGE;
-      }
-      const cptRes = { data: allCptRows };
-      const { data: pricesData } = await supabase.from('cpt_prices').select('cpt_code, average_price');
-      const pricesRes = { data: pricesData };
+      const [allSurgeons, assignments, allCptRows, pricesRes] = await Promise.all([
+        surgeonsPromise, assignmentsPromise, cptPromise, pricesPromise,
+      ]);
 
+      // Filter surgeons by tab
+      const idSet = new Set(assignments.map(r => r.surgeon_id));
+      const filteredSurgeons = isUnassignedTab
+        ? allSurgeons.filter(s => !idSet.has(s.id))
+        : allSurgeons.filter(s => idSet.has(s.id));
+
+      // Build CPT enrichment map
       const priceByCode = {};
       const descByCode = {};
       (pricesRes.data || []).forEach(p => {
@@ -169,10 +176,9 @@ const RegionAccountAssigner = () => {
         if (p.cpt_description) descByCode[p.cpt_code] = p.cpt_description;
       });
 
-      // Build lookup only for accounts currently displayed
-      const accountIds = new Set(accounts.map(a => a.id));
+      const accountIds = new Set(filteredSurgeons.map(a => a.id));
       const map = {};
-      (cptRes.data || []).forEach(row => {
+      allCptRows.forEach(row => {
         if (!accountIds.has(row.surgeon_id)) return;
         if (!map[row.surgeon_id]) map[row.surgeon_id] = { totalVolume: 0, marketPotential: 0, procedures: [] };
         const vol = row.annual_volume || 0;
@@ -188,10 +194,12 @@ const RegionAccountAssigner = () => {
       });
 
       setCptMap(map);
+      setAccounts(filteredSurgeons);
+      setLoading(false);
     };
 
-    fetchCptData();
-  }, [accounts]);
+    fetchAll();
+  }, [selectedRegionId, refreshKey]);
 
   // Enrich accounts with CPT aggregates
   const enrichedAccounts = useMemo(() => {
@@ -203,30 +211,46 @@ const RegionAccountAssigner = () => {
     }));
   }, [accounts, cptMap]);
 
-  // Extract unique filter options from accounts
-  const specialtyOptions = useMemo(() => {
-    const set = new Set();
-    accounts.forEach(a => { if (a.specialty) set.add(a.specialty); });
-    return [...set].sort();
-  }, [accounts]);
-
+  // Extract unique filter options -- cascading: State > City > Site of Care > Specialty
+  // State always shows all options (no upstream filter)
   const stateOptions = useMemo(() => {
     const set = new Set();
     accounts.forEach(a => { if (a.state) set.add(a.state); });
     return [...set].sort();
   }, [accounts]);
 
+  // City narrows by selected states
   const cityOptions = useMemo(() => {
+    const pool = filterStates.length > 0
+      ? accounts.filter(a => filterStates.includes(a.state))
+      : accounts;
     const set = new Set();
-    accounts.forEach(a => { if (a.city) set.add(a.city); });
+    pool.forEach(a => { if (a.city) set.add(a.city); });
     return [...set].sort();
-  }, [accounts]);
+  }, [accounts, filterStates]);
 
+  // Site of Care narrows by selected states + cities
   const siteOptions = useMemo(() => {
+    const pool = accounts.filter(a =>
+      (filterStates.length === 0 || filterStates.includes(a.state)) &&
+      (filterCities.length === 0 || filterCities.includes(a.city))
+    );
     const set = new Set();
-    accounts.forEach(a => { if (a.site_of_care) set.add(a.site_of_care); });
+    pool.forEach(a => { if (a.site_of_care) set.add(a.site_of_care); });
     return [...set].sort();
-  }, [accounts]);
+  }, [accounts, filterStates, filterCities]);
+
+  // Specialty narrows by selected states + cities + sites
+  const specialtyOptions = useMemo(() => {
+    const pool = accounts.filter(a =>
+      (filterStates.length === 0 || filterStates.includes(a.state)) &&
+      (filterCities.length === 0 || filterCities.includes(a.city)) &&
+      (filterSites.length === 0 || filterSites.includes(a.site_of_care))
+    );
+    const set = new Set();
+    pool.forEach(a => { if (a.specialty) set.add(a.specialty); });
+    return [...set].sort();
+  }, [accounts, filterStates, filterCities, filterSites]);
 
   const activeFilterCount = filterSpecialties.length + filterStates.length + filterCities.length + filterSites.length;
 
@@ -271,78 +295,48 @@ const RegionAccountAssigner = () => {
     });
   }, [enrichedAccounts, filterSpecialties, filterStates, filterCities, filterSites, searchQuery, sortBy]);
 
-  const refreshAccounts = async () => {
-    if (!browseMode && !selectedRegionId) return;
-    setLoading(true);
-    setSelectedIds([]);
-
-    let assignedIds = new Set();
-    if (!browseMode && selectedRegionId) {
-      const { data: assigned } = await supabase
-        .from('surgeon_regions')
-        .select('surgeon_id')
-        .eq('region_id', selectedRegionId);
-      assignedIds = new Set((assigned || []).map(r => r.surgeon_id));
-    }
-
-    let allSurgeons = [];
-    let offset = 0;
-    const SZ = 10000;
-    while (true) {
-      const { data } = await supabase
-        .from('surgeons')
-        .select('id, full_name, first_name, last_name, npi, specialty, city, state, site_of_care')
-        .order('full_name')
-        .range(offset, offset + SZ - 1);
-      if (!data || data.length === 0) break;
-      allSurgeons = allSurgeons.concat(data);
-      if (data.length < SZ) break;
-      offset += SZ;
-    }
-
-    if (browseMode) {
-      setAccounts(allSurgeons);
-    } else if (mode === 'add') {
-      setAccounts(allSurgeons.filter(s => !assignedIds.has(s.id)));
-    } else {
-      setAccounts(allSurgeons.filter(s => assignedIds.has(s.id)));
-    }
-
-    setLoading(false);
+  const refreshAccounts = () => {
+    setRefreshKey(k => k + 1);
   };
 
-  const handleAction = async () => {
-    if (selectedIds.length === 0) return;
+  const handleAssign = async (toRegionId) => {
+    if (selectedIds.length === 0 || !toRegionId) return;
     setSaving(true);
 
-    if (mode === 'add') {
-      // Batch insert
-      for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
-        const batch = selectedIds.slice(i, i + BATCH_SIZE).map(surgeonId => ({
-          surgeon_id: surgeonId,
-          region_id: selectedRegionId,
-        }));
-        const { error } = await supabase.from('surgeon_regions').insert(batch);
-        if (error) {
-          console.error('[RegionAccountAssigner] Insert error:', error);
-          alert('Failed to assign accounts: ' + error.message);
-          break;
-        }
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE).map(surgeonId => ({
+        surgeon_id: surgeonId,
+        region_id: toRegionId,
+      }));
+      const { error } = await supabase.from('surgeon_regions').upsert(batch, { onConflict: 'surgeon_id,region_id' });
+      if (error) {
+        console.error('[RegionAccountAssigner] Insert error:', error);
+        alert('Failed to assign accounts: ' + error.message);
+        break;
       }
-    } else {
-      // Batch delete
-      for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
-        const batch = selectedIds.slice(i, i + BATCH_SIZE);
-        const { error } = await supabase
-          .from('surgeon_regions')
-          .delete()
-          .eq('region_id', selectedRegionId)
-          .in('surgeon_id', batch);
-        if (error) {
-          console.error('[RegionAccountAssigner] Delete error:', error);
-          alert('Failed to remove accounts: ' + error.message);
-          break;
-        }
+    }
+
+    setSaving(false);
+    setActionType(null);
+    setTargetRegionId(null);
+    refreshAccounts();
+  };
+
+  const handleUnassign = async () => {
+    if (selectedIds.length === 0 || !selectedRegionId) return;
+    setSaving(true);
+
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase
+        .from('surgeon_regions')
+        .delete()
+        .eq('region_id', selectedRegionId)
+        .in('surgeon_id', batch);
+      if (error) {
+        console.error('[RegionAccountAssigner] Delete error:', error);
+        alert('Failed to unassign accounts: ' + error.message);
+        break;
       }
     }
 
@@ -350,29 +344,138 @@ const RegionAccountAssigner = () => {
     refreshAccounts();
   };
 
-  const toggleSpecialty = (val) => {
-    setFilterSpecialties(prev =>
-      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
-    );
-    setSelectedIds([]);
+  const handleReassign = async (toRegionId) => {
+    if (selectedIds.length === 0 || !selectedRegionId || !toRegionId) return;
+    setSaving(true);
+
+    // Remove from current region
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase
+        .from('surgeon_regions')
+        .delete()
+        .eq('region_id', selectedRegionId)
+        .in('surgeon_id', batch);
+      if (error) {
+        console.error('[RegionAccountAssigner] Delete error:', error);
+        alert('Failed to reassign accounts: ' + error.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    // Add to target region
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE).map(surgeonId => ({
+        surgeon_id: surgeonId,
+        region_id: toRegionId,
+      }));
+      const { error } = await supabase.from('surgeon_regions').upsert(batch, { onConflict: 'surgeon_id,region_id' });
+      if (error) {
+        console.error('[RegionAccountAssigner] Insert error:', error);
+        alert('Failed to reassign accounts: ' + error.message);
+        break;
+      }
+    }
+
+    setSaving(false);
+    setActionType(null);
+    setTargetRegionId(null);
+    refreshAccounts();
+  };
+
+  const handleDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setSaving(true);
+
+    // Delete from surgeon_regions first (any region assignments)
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE);
+      await supabase
+        .from('surgeon_regions')
+        .delete()
+        .in('surgeon_id', batch);
+    }
+
+    // Delete from surgeon_cpt_data
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE);
+      await supabase
+        .from('surgeon_cpt_data')
+        .delete()
+        .in('surgeon_id', batch);
+    }
+
+    // Delete from surgeons
+    for (let i = 0; i < selectedIds.length; i += BATCH_SIZE) {
+      const batch = selectedIds.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase
+        .from('surgeons')
+        .delete()
+        .in('id', batch);
+      if (error) {
+        console.error('[RegionAccountAssigner] Delete surgeon error:', error);
+        alert('Failed to delete accounts: ' + error.message);
+        break;
+      }
+    }
+
+    setSaving(false);
+    setShowDeleteConfirm(false);
+    refreshAccounts();
   };
 
   const toggleState = (val) => {
-    setFilterStates(prev =>
-      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
-    );
+    setFilterStates(prev => {
+      const next = prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val];
+      // Clear downstream selections that no longer exist in narrowed options
+      const stateFiltered = next.length > 0 ? accounts.filter(a => next.includes(a.state)) : accounts;
+      const validCities = new Set(stateFiltered.map(a => a.city).filter(Boolean));
+      const validSites = new Set(stateFiltered.map(a => a.site_of_care).filter(Boolean));
+      const validSpecs = new Set(stateFiltered.map(a => a.specialty).filter(Boolean));
+      setFilterCities(prev => prev.filter(c => validCities.has(c)));
+      setFilterSites(prev => prev.filter(s => validSites.has(s)));
+      setFilterSpecialties(prev => prev.filter(s => validSpecs.has(s)));
+      return next;
+    });
     setSelectedIds([]);
   };
 
   const toggleCity = (val) => {
-    setFilterCities(prev =>
-      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
-    );
+    setFilterCities(prev => {
+      const next = prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val];
+      // Clear downstream selections that no longer exist
+      const upstream = accounts.filter(a =>
+        (filterStates.length === 0 || filterStates.includes(a.state)) &&
+        (next.length === 0 || next.includes(a.city))
+      );
+      const validSites = new Set(upstream.map(a => a.site_of_care).filter(Boolean));
+      const validSpecs = new Set(upstream.map(a => a.specialty).filter(Boolean));
+      setFilterSites(prev => prev.filter(s => validSites.has(s)));
+      setFilterSpecialties(prev => prev.filter(s => validSpecs.has(s)));
+      return next;
+    });
     setSelectedIds([]);
   };
 
   const toggleSite = (val) => {
-    setFilterSites(prev =>
+    setFilterSites(prev => {
+      const next = prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val];
+      // Clear downstream specialty selections that no longer exist
+      const upstream = accounts.filter(a =>
+        (filterStates.length === 0 || filterStates.includes(a.state)) &&
+        (filterCities.length === 0 || filterCities.includes(a.city)) &&
+        (next.length === 0 || next.includes(a.site_of_care))
+      );
+      const validSpecs = new Set(upstream.map(a => a.specialty).filter(Boolean));
+      setFilterSpecialties(prev => prev.filter(s => validSpecs.has(s)));
+      return next;
+    });
+    setSelectedIds([]);
+  };
+
+  const toggleSpecialty = (val) => {
+    setFilterSpecialties(prev =>
       prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
     );
     setSelectedIds([]);
@@ -387,7 +490,7 @@ const RegionAccountAssigner = () => {
   };
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, paddingBottom: selectedIds.length > 0 ? '100px' : '16px' }}>
       <div style={styles.headerRow}>
         <button onClick={() => navigate('/field-intel/settings')} style={styles.backBtn}>
           <ArrowLeftIcon />
@@ -400,21 +503,21 @@ const RegionAccountAssigner = () => {
         <label style={styles.regionLabel}>Region</label>
         <div style={styles.pillRow}>
           <button
-            onClick={() => { setBrowseMode(true); setSelectedRegionId(null); setSelectedIds([]); setMode('add'); }}
+            onClick={() => { setSelectedRegionId(null); setSelectedIds([]); setActionType(null); }}
             style={{
               ...styles.pill,
-              ...(browseMode ? styles.pillActive : {}),
+              ...(isUnassignedTab ? styles.pillActive : {}),
             }}
           >
-            Browse All
+            Unassigned
           </button>
           {regions.map((r) => (
             <button
               key={r.id}
-              onClick={() => { setBrowseMode(false); setSelectedRegionId(r.id); setSelectedIds([]); }}
+              onClick={() => { setSelectedRegionId(r.id); setSelectedIds([]); setActionType(null); }}
               style={{
                 ...styles.pill,
-                ...(!browseMode && selectedRegionId === r.id ? styles.pillActive : {}),
+                ...(!isUnassignedTab && selectedRegionId === r.id ? styles.pillActive : {}),
               }}
             >
               {r.name}
@@ -445,37 +548,6 @@ const RegionAccountAssigner = () => {
             <button onClick={handleCreateRegion} style={styles.createRegionSaveBtn}>Create</button>
             <button onClick={() => { setShowCreateRegion(false); setNewRegionName(''); }} style={styles.createRegionCancelBtn}>Cancel</button>
           </div>
-        </div>
-      )}
-
-      {/* Browse Mode Hint */}
-      {browseMode && (
-        <p style={styles.browseHint}>
-          Browsing all imported data. Use filters and sort to explore, then create a region to start assigning.
-        </p>
-      )}
-
-      {/* Mode Toggle -- only when a region is selected */}
-      {!browseMode && selectedRegionId && (
-        <div style={styles.modeRow}>
-          <button
-            onClick={() => { setMode('add'); setSelectedIds([]); }}
-            style={{
-              ...styles.modeBtn,
-              ...(mode === 'add' ? styles.modeBtnActive : {}),
-            }}
-          >
-            Add to Region
-          </button>
-          <button
-            onClick={() => { setMode('remove'); setSelectedIds([]); }}
-            style={{
-              ...styles.modeBtn,
-              ...(mode === 'remove' ? styles.modeBtnActive : {}),
-            }}
-          >
-            Remove from Region
-          </button>
         </div>
       )}
 
@@ -536,29 +608,6 @@ const RegionAccountAssigner = () => {
           {/* Filter Panel */}
           {showFilters && (
             <div style={styles.filterPanel}>
-              {/* Specialty */}
-              {specialtyOptions.length > 0 && (
-                <div style={styles.filterGroup}>
-                  <span style={styles.filterGroupLabel}>
-                    Specialty ({specialtyOptions.length})
-                  </span>
-                  <div style={styles.filterPillRow}>
-                    {specialtyOptions.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => toggleSpecialty(s)}
-                        style={{
-                          ...styles.filterPill,
-                          ...(filterSpecialties.includes(s) ? styles.filterPillActive : {}),
-                        }}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* State */}
               {stateOptions.length > 0 && (
                 <div style={styles.filterGroup}>
@@ -628,6 +677,29 @@ const RegionAccountAssigner = () => {
                 </div>
               )}
 
+              {/* Specialty */}
+              {specialtyOptions.length > 0 && (
+                <div style={styles.filterGroup}>
+                  <span style={styles.filterGroupLabel}>
+                    Specialty ({specialtyOptions.length})
+                  </span>
+                  <div style={styles.filterPillRow}>
+                    {specialtyOptions.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => toggleSpecialty(s)}
+                        style={{
+                          ...styles.filterPill,
+                          ...(filterSpecialties.includes(s) ? styles.filterPillActive : {}),
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button onClick={() => setShowFilters(false)} style={styles.filterDoneBtn}>
                 Done
               </button>
@@ -681,25 +753,140 @@ const RegionAccountAssigner = () => {
         />
       )}
 
-      {/* Sticky Action Button -- only when a region is selected */}
-      {!browseMode && selectedIds.length > 0 && (
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <h3 style={styles.modalTitle}>Delete {selectedIds.length.toLocaleString()} Account{selectedIds.length !== 1 ? 's' : ''}?</h3>
+            <p style={styles.modalText}>
+              This will permanently delete the selected surgeon{selectedIds.length !== 1 ? 's' : ''}, including all region assignments and CPT data. This cannot be undone.
+            </p>
+            <div style={styles.modalActions}>
+              <button
+                onClick={handleDelete}
+                disabled={saving}
+                style={{
+                  ...styles.actionBtn,
+                  backgroundColor: '#dc2626',
+                  opacity: saving ? 0.6 : 1,
+                  flex: 1,
+                }}
+              >
+                {saving ? 'Deleting...' : 'Delete Permanently'}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{ ...styles.cancelBtn, flex: 1, textAlign: 'center' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Action Bar */}
+      {selectedIds.length > 0 && !showDeleteConfirm && (
         <div style={styles.stickyBar}>
-          <button
-            onClick={handleAction}
-            disabled={saving}
-            style={{
-              ...styles.actionBtn,
-              opacity: saving ? 0.6 : 1,
-              backgroundColor: mode === 'remove' ? '#dc2626' : '#1e3a8a',
-            }}
-          >
-            {saving
-              ? `${mode === 'add' ? 'Assigning' : 'Removing'}...`
-              : mode === 'add'
-                ? `Assign ${selectedIds.length.toLocaleString()} Selected`
-                : `Remove ${selectedIds.length.toLocaleString()} Selected`
-            }
-          </button>
+          {/* Region picker for assign/reassign */}
+          {actionType && (
+            <div style={styles.pickerWrap}>
+              <span style={styles.pickerLabel}>
+                {actionType === 'assign' ? 'Assign to:' : 'Reassign to:'}
+              </span>
+              <div style={styles.pickerPillRow}>
+                {regions
+                  .filter(r => actionType === 'reassign' ? r.id !== selectedRegionId : true)
+                  .map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => setTargetRegionId(r.id)}
+                      style={{
+                        ...styles.pickerPill,
+                        ...(targetRegionId === r.id ? styles.pickerPillActive : {}),
+                      }}
+                    >
+                      {r.name}
+                    </button>
+                  ))
+                }
+              </div>
+              <div style={styles.pickerActions}>
+                <button
+                  onClick={() => {
+                    if (!targetRegionId) return;
+                    if (actionType === 'assign') handleAssign(targetRegionId);
+                    else handleReassign(targetRegionId);
+                  }}
+                  disabled={saving || !targetRegionId}
+                  style={{
+                    ...styles.actionBtn,
+                    opacity: (saving || !targetRegionId) ? 0.5 : 1,
+                    backgroundColor: '#1e3a8a',
+                    flex: 1,
+                  }}
+                >
+                  {saving ? 'Working...' : `Confirm ${actionType === 'assign' ? 'Assign' : 'Reassign'} (${selectedIds.length.toLocaleString()})`}
+                </button>
+                <button
+                  onClick={() => { setActionType(null); setTargetRegionId(null); }}
+                  style={styles.cancelBtn}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons - Unassigned tab */}
+          {!actionType && isUnassignedTab && (
+            <div style={styles.actionRow}>
+              <button
+                onClick={() => setActionType('assign')}
+                style={{ ...styles.actionBtn, backgroundColor: '#1e3a8a', flex: 1 }}
+              >
+                Assign {selectedIds.length.toLocaleString()} Selected
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ ...styles.actionBtn, backgroundColor: '#dc2626', flex: 0, padding: '14px 18px' }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+
+          {/* Action buttons - Region tab */}
+          {!actionType && !isUnassignedTab && (
+            <div style={styles.actionRow}>
+              <button
+                onClick={handleUnassign}
+                disabled={saving}
+                style={{
+                  ...styles.actionBtn,
+                  backgroundColor: '#64748b',
+                  opacity: saving ? 0.6 : 1,
+                  flex: 1,
+                }}
+              >
+                {saving ? 'Removing...' : `Unassign ${selectedIds.length.toLocaleString()}`}
+              </button>
+              {regions.length > 1 && (
+                <button
+                  onClick={() => setActionType('reassign')}
+                  style={{ ...styles.actionBtn, backgroundColor: '#1e3a8a', flex: 1 }}
+                >
+                  Reassign
+                </button>
+              )}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ ...styles.actionBtn, backgroundColor: '#dc2626', flex: 0, padding: '14px 18px' }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -709,7 +896,7 @@ const RegionAccountAssigner = () => {
 const styles = {
   container: {
     padding: '16px',
-    paddingBottom: '80px',
+    paddingBottom: '16px',
     backgroundColor: '#f8fafc',
     minHeight: '100%',
     display: 'flex',
@@ -822,38 +1009,94 @@ const styles = {
     fontWeight: '500',
     cursor: 'pointer',
   },
-  browseHint: {
-    fontSize: '13px',
-    color: '#64748b',
-    lineHeight: '1.4',
-    margin: 0,
-    padding: '8px 12px',
-    backgroundColor: '#eff6ff',
-    borderRadius: '8px',
-    border: '1px solid #dbeafe',
-  },
-  modeRow: {
+  pickerWrap: {
     display: 'flex',
-    gap: '8px',
+    flexDirection: 'column',
+    gap: '10px',
   },
-  modeBtn: {
-    flex: 1,
-    padding: '9px 12px',
-    borderRadius: '8px',
+  pickerLabel: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#475569',
+  },
+  pickerPillRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+  },
+  pickerPill: {
+    padding: '6px 12px',
+    borderRadius: '20px',
     border: '1px solid #e2e8f0',
     backgroundColor: '#ffffff',
     color: '#64748b',
     fontSize: '13px',
     fontWeight: '500',
     cursor: 'pointer',
-    textAlign: 'center',
-    transition: 'all 0.15s ease',
   },
-  modeBtnActive: {
-    backgroundColor: '#eff6ff',
-    color: '#1e3a8a',
-    border: '1px solid #93c5fd',
+  pickerPillActive: {
+    backgroundColor: '#1e3a8a',
+    color: '#ffffff',
+    border: '1px solid #1e3a8a',
+  },
+  pickerActions: {
+    display: 'flex',
+    gap: '8px',
+  },
+  cancelBtn: {
+    padding: '14px 16px',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#ffffff',
+    color: '#64748b',
+    fontSize: '14px',
     fontWeight: '600',
+    cursor: 'pointer',
+  },
+  actionRow: {
+    display: 'flex',
+    gap: '8px',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 200,
+    padding: '24px',
+  },
+  modalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    padding: '24px',
+    maxWidth: '400px',
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+  },
+  modalTitle: {
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#1e293b',
+    margin: 0,
+  },
+  modalText: {
+    fontSize: '14px',
+    color: '#64748b',
+    lineHeight: '1.5',
+    margin: 0,
+  },
+  modalActions: {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '4px',
   },
   // Filter styles
   filterSection: {

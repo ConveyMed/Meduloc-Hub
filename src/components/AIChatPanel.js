@@ -278,6 +278,13 @@ const AIChatPanel = () => {
             </div>
 
             <div style={styles.content} ref={contentRef}>
+              {/* AI Disclaimer */}
+              <div style={styles.disclaimerBanner}>
+                <p style={styles.disclaimerText}>
+                  <strong>AI Disclaimer:</strong> This AI Agent may occasionally produce inaccurate information. Verify any critical business or medical information before relying on it. Prompts and data are not used to train public AI models.
+                </p>
+              </div>
+
               {/* Bot greeting - always shown first */}
               <div style={styles.assistantMessage}>
                 <div style={styles.assistantContent}>
@@ -451,6 +458,19 @@ const AIChatPanel = () => {
 };
 
 const styles = {
+  disclaimerBanner: {
+    backgroundColor: '#fef9e7',
+    border: '1px solid #f0e4b8',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    margin: '0 0 12px 0',
+  },
+  disclaimerText: {
+    fontSize: '12px',
+    color: '#6b5c00',
+    lineHeight: '1.5',
+    margin: 0,
+  },
   backdrop: {
     position: 'fixed',
     top: 0,

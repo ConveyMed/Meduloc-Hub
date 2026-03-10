@@ -147,8 +147,8 @@ const BottomNav = () => {
 
     // 1. Home (always)
     items.push({ id: 'home', icon: HomeIcon, label: 'Home', path: '/home' });
-    // 2. Feedback (always)
-    items.push({ id: 'feedback', icon: FormsIcon, label: 'Feedback', path: '/customer-feedback' });
+    // 2. Case Form (always)
+    items.push({ id: 'feedback', icon: FormsIcon, label: 'Case Form', path: '/customer-feedback' });
     // 3. Create (always, special render)
     items.push({ id: 'create', icon: CreateIcon, label: 'Create', path: '/create', isCreate: true });
     // 4. Sales Tools (always)

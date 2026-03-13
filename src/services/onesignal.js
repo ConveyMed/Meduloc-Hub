@@ -1,7 +1,7 @@
 import { supabase } from '../config/supabase';
 import { Capacitor } from '@capacitor/core';
 
-const ONESIGNAL_APP_ID = process.env.REACT_APP_ONESIGNAL_APP_ID || '7144dde5-f28b-42e4-a826-9f5adef0a772';
+const ONESIGNAL_APP_ID = process.env.REACT_APP_ONESIGNAL_APP_ID || 'e9802b55-4f10-49de-a358-dc0c8e110f8b';
 
 let isSDKInitialized = false;
 let currentUserId = null;

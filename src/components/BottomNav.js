@@ -45,14 +45,6 @@ const UpdatesIcon = () => (
   </svg>
 );
 
-const FieldIntelIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="20" x2="18" y2="10" />
-    <line x1="12" y1="20" x2="12" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="14" />
-  </svg>
-);
-
 const AIIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
@@ -136,7 +128,6 @@ const BottomNav = () => {
   const showChat = settings.show_chat !== false && settings.show_chat !== 'false';
   const showDirectory = settings.show_directory !== false && settings.show_directory !== 'false';
   const showAIShortcut = settings.show_ai_shortcut !== false && settings.show_ai_shortcut !== 'false';
-  const showFieldIntel = settings.show_field_intel !== false && settings.show_field_intel !== 'false';
   const showUpdates = settings.show_updates !== false && settings.show_updates !== 'false';
 
   // Master ordered list - items always maintain this relative order.
@@ -157,11 +148,7 @@ const BottomNav = () => {
     if (showUpdates) {
       items.push({ id: 'updates', icon: UpdatesIcon, label: 'Updates', path: '/updates', hasBadge: totalUnread > 0 });
     }
-    // 6. Field Intel (toggle)
-    if (showFieldIntel) {
-      items.push({ id: 'field-intel', icon: FieldIntelIcon, label: 'Field Intel', path: '/field-intel' });
-    }
-    // 7. AI Agent (toggle)
+    // 6. AI Agent (toggle)
     if (showAIShortcut) {
       items.push({ id: 'ai', icon: AIIcon, label: 'AI Agent', path: '/ai-agent' });
     }
@@ -179,7 +166,7 @@ const BottomNav = () => {
     items.push({ id: 'profile', icon: ProfileIcon, label: 'Profile', path: '/profile' });
 
     return items;
-  }, [showUpdates, showFieldIntel, showAIShortcut, showDirectory, showChat, chatEnabledByAdmin, totalUnread, chatUnread]);
+  }, [showUpdates, showAIShortcut, showDirectory, showChat, chatEnabledByAdmin, totalUnread, chatUnread]);
 
   // Split into rows
   // Collapsed: first 4 items + More button
@@ -191,7 +178,6 @@ const BottomNav = () => {
 
   const getActiveTab = () => {
     const path = location.pathname;
-    if (path.startsWith('/field-intel')) return 'field-intel';
     const tab = allItems.find(t => t.path === path);
     return tab ? tab.id : 'home';
   };

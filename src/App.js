@@ -50,29 +50,6 @@ import ManageAnalytics from './pages/ManageAnalytics';
 import { TermsAndConditions, PrivacyPolicy, DeleteAccount } from './pages/LegalSupport';
 import BottomNav from './components/BottomNav';
 import AIChatPanel from './components/AIChatPanel';
-import { FieldIntelProvider } from './field-intel/FieldIntelContext';
-import FieldIntelZone from './field-intel/FieldIntelZone';
-import FieldIntelPlaceholder from './field-intel/FieldIntelPlaceholder';
-import CSVImport from './field-intel/admin/CSVImport';
-import SettingsHub from './field-intel/admin/SettingsHub';
-import RegionManager from './field-intel/admin/RegionManager';
-import RegionAccountAssigner from './field-intel/admin/RegionAccountAssigner';
-import HierarchyManager from './field-intel/admin/HierarchyManager';
-import CustomFieldManager from './field-intel/admin/CustomFieldManager';
-import DelegationScreen from './field-intel/DelegationScreen';
-import SurgeonList from './field-intel/SurgeonList';
-import SurgeonDossier from './field-intel/SurgeonDossier';
-import CallLogHistory from './field-intel/CallLogHistory';
-import CallLogEntry from './field-intel/CallLogEntry';
-import LeadQueue from './field-intel/LeadQueue';
-import LeadSubmit from './field-intel/LeadSubmit';
-import DrillDownView from './field-intel/DrillDownView';
-import RepDashboard from './field-intel/dashboards/RepDashboard';
-import ManagerDashboard from './field-intel/dashboards/ManagerDashboard';
-import VPDashboard from './field-intel/dashboards/VPDashboard';
-import AdminDashboard from './field-intel/dashboards/AdminDashboard';
-import ActivityFeed from './field-intel/dashboards/ActivityFeed';
-import { useFieldIntel } from './field-intel/FieldIntelContext';
 import OfflineLoginScreen from './components/OfflineLoginScreen';
 import OfflineScreen from './components/OfflineScreen';
 import { AIChatProvider } from './context/AIChatContext';
@@ -84,7 +61,7 @@ import ManageOrgCode from './pages/ManageOrgCode';
 import './App.css';
 
 // Routes that should NOT show bottom nav
-const noNavRoutes = ['/', '/signup', '/confirm-email', '/email-confirmed', '/forgot-password', '/reset-password', '/profile-complete', '/field-intel'];
+const noNavRoutes = ['/', '/signup', '/confirm-email', '/email-confirmed', '/forgot-password', '/reset-password', '/profile-complete'];
 
 // ============================================
 // OneSignal Components
@@ -178,16 +155,6 @@ const AppShell = ({ children, showNav = false }) => {
       {showNav && <CreatePostModal />}
     </div>
   );
-};
-
-// Role-based dashboard wrapper: picks VP or Admin dashboard based on role
-const RoleDashboard = () => {
-  const { role } = useFieldIntel();
-  if (role === 'admin') return <AdminDashboard />;
-  if (role === 'vp') return <VPDashboard />;
-  if (role === 'manager') return <ManagerDashboard />;
-  if (role === 'rep') return <RepDashboard />;
-  return <FieldIntelPlaceholder label="Dashboard" />;
 };
 
 // Routes allowed when offline (after auth)
@@ -336,8 +303,7 @@ function AppContent() {
   }, [isAuthenticated, isProfileComplete, navigate]);
 
   // Determine if bottom nav should show
-  const isFieldIntelRoute = location.pathname.startsWith('/field-intel');
-  const showBottomNav = isAuthenticated && isProfileComplete && !noNavRoutes.includes(location.pathname) && !isFieldIntelRoute;
+  const showBottomNav = isAuthenticated && isProfileComplete && !noNavRoutes.includes(location.pathname);
 
   // Check if current route is allowed offline
   const isOfflineAllowed = offlineAllowedRoutes.some(route =>
@@ -630,35 +596,6 @@ function AppContent() {
                 ? <Navigate to="/profile-complete" replace />
                 : <AppShell showNav={showBottomNav}><DeleteAccount /></AppShell>
           } />
-          {/* Field Intel Zone */}
-          <Route path="/field-intel" element={
-            !isAuthenticated
-              ? <Navigate to="/" replace />
-              : !isProfileComplete
-                ? <Navigate to="/profile-complete" replace />
-                : <FieldIntelZone />
-          }>
-            <Route index element={<RoleDashboard />} />
-            <Route path="territory" element={<RepDashboard />} />
-            <Route path="dossier" element={<SurgeonList />} />
-            <Route path="dossier/:surgeonId" element={<SurgeonDossier />} />
-            <Route path="call-log" element={<CallLogHistory />} />
-            <Route path="call-log/new" element={<CallLogEntry />} />
-            <Route path="leads" element={<LeadQueue />} />
-            <Route path="leads/new" element={<LeadSubmit />} />
-            <Route path="team" element={<ManagerDashboard />} />
-            <Route path="accounts" element={<DelegationScreen />} />
-            <Route path="activity" element={<ActivityFeed />} />
-            <Route path="dashboard" element={<RoleDashboard />} />
-            <Route path="regions" element={<DelegationScreen />} />
-            <Route path="drill/:userId" element={<DrillDownView />} />
-            <Route path="database" element={<CSVImport />} />
-            <Route path="settings" element={<SettingsHub />} />
-            <Route path="settings/regions" element={<RegionManager />} />
-            <Route path="settings/assign-accounts" element={<RegionAccountAssigner />} />
-            <Route path="settings/hierarchy" element={<HierarchyManager />} />
-            <Route path="settings/custom-fields" element={<CustomFieldManager />} />
-          </Route>
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -672,7 +609,6 @@ function App() {
     <Router>
       <AuthProvider>
         <AppSettingsProvider>
-          <FieldIntelProvider>
           <OfflineProvider>
             <PostsProvider>
             <ContentProvider>
@@ -698,7 +634,6 @@ function App() {
             </ContentProvider>
             </PostsProvider>
           </OfflineProvider>
-          </FieldIntelProvider>
         </AppSettingsProvider>
       </AuthProvider>
     </Router>

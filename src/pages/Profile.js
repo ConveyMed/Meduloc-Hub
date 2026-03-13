@@ -168,7 +168,6 @@ const Profile = () => {
   const showChat = settings.show_chat !== false && settings.show_chat !== 'false';
   const showDirectory = settings.show_directory !== false && settings.show_directory !== 'false';
   const showAIShortcut = settings.show_ai_shortcut !== false && settings.show_ai_shortcut !== 'false';
-  const showFieldIntel = settings.show_field_intel !== false && settings.show_field_intel !== 'false';
   const showUpdates = settings.show_updates !== false && settings.show_updates !== 'false';
   const [appVersion, setAppVersion] = useState('');
 
@@ -190,7 +189,6 @@ const Profile = () => {
   const toggleChat = () => updateSetting('show_chat', !showChat);
   const toggleDirectory = () => updateSetting('show_directory', !showDirectory);
   const toggleAIShortcut = () => updateSetting('show_ai_shortcut', !showAIShortcut);
-  const toggleFieldIntel = () => updateSetting('show_field_intel', !showFieldIntel);
   const toggleUpdates = () => updateSetting('show_updates', !showUpdates);
 
 
@@ -413,24 +411,6 @@ const Profile = () => {
                     <div style={{
                       ...styles.toggleKnob,
                       transform: showDirectory ? 'translateX(20px)' : 'translateX(0)',
-                    }} />
-                  </button>
-                </div>
-                <div style={styles.toggleItem}>
-                  <div style={styles.menuItemWithIcon}>
-                    <AnalyticsIcon />
-                    <span style={styles.menuText}>Customer / Field Intel</span>
-                  </div>
-                  <button
-                    style={{
-                      ...styles.toggle,
-                      backgroundColor: showFieldIntel ? '#004B87' : '#e2e8f0',
-                    }}
-                    onClick={toggleFieldIntel}
-                  >
-                    <div style={{
-                      ...styles.toggleKnob,
-                      transform: showFieldIntel ? 'translateX(20px)' : 'translateX(0)',
                     }} />
                   </button>
                 </div>

@@ -311,8 +311,12 @@ function AppContent() {
     location.pathname === route || location.pathname.startsWith(route + '/')
   );
 
+  // Public pages bypass org code gate
+  const publicRoutes = ['/support', '/terms', '/privacy'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route);
+
   // Show organization code gate before anything else (no auth required)
-  if (!orgCodeVerified) {
+  if (!orgCodeVerified && !isPublicRoute) {
     return (
       <OrganizationGate onVerified={() => {
         localStorage.setItem('org_code_verified', 'true');
@@ -576,20 +580,8 @@ function AppContent() {
                 ? <Navigate to="/profile-complete" replace />
                 : <ManageAnalytics />
           } />
-          <Route path="/terms" element={
-            !isAuthenticated
-              ? <Navigate to="/" replace />
-              : !isProfileComplete
-                ? <Navigate to="/profile-complete" replace />
-                : <AppShell showNav={showBottomNav}><TermsAndConditions /></AppShell>
-          } />
-          <Route path="/privacy" element={
-            !isAuthenticated
-              ? <Navigate to="/" replace />
-              : !isProfileComplete
-                ? <Navigate to="/profile-complete" replace />
-                : <AppShell showNav={showBottomNav}><PrivacyPolicy /></AppShell>
-          } />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/delete-account" element={
             !isAuthenticated
               ? <Navigate to="/" replace />

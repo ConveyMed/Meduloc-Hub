@@ -48,6 +48,7 @@ import ChatConversation from './pages/ChatConversation';
 import ManageChat from './pages/ManageChat';
 import ManageAnalytics from './pages/ManageAnalytics';
 import { TermsAndConditions, PrivacyPolicy, DeleteAccount } from './pages/LegalSupport';
+import Support from './pages/Support';
 import BottomNav from './components/BottomNav';
 import AIChatPanel from './components/AIChatPanel';
 import OfflineLoginScreen from './components/OfflineLoginScreen';
@@ -596,6 +597,8 @@ function AppContent() {
                 ? <Navigate to="/profile-complete" replace />
                 : <AppShell showNav={showBottomNav}><DeleteAccount /></AppShell>
           } />
+          {/* Public pages - no auth required */}
+          <Route path="/support" element={<Support />} />
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

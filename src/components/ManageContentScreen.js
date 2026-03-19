@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { supabase } from '../config/supabase';
-import { createBunnyVideo, uploadBunnyVideo, deleteBunnyVideo } from '../services/bunnyVideo';
+import { deleteBunnyVideo } from '../services/bunnyVideo';
 import {
   DndContext,
   closestCenter,
@@ -315,17 +315,17 @@ const CategoryModal = ({ isOpen, onClose, onSave, category, title }) => {
 const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
   const modalRef = React.useRef(null);
   const scrollYRef = React.useRef(0);
-  const tusUploadRef = useRef(null);
+  const { prepareVideoUpload } = useContent();
   const [formData, setFormData] = useState({
     title: '', description: '', thumbnail_url: '', file_url: '', file_name: '',
     external_link: '', external_link_label: '', quiz_link: '', quiz_link_label: '',
     is_downloadable: true, use_company_logo: false,
     bunny_video_id: '', bunny_video_status: '',
   });
+  const [pendingVideoUpload, setPendingVideoUpload] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [videoUploading, setVideoUploading] = useState(false);
-  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [videoCreating, setVideoCreating] = useState(false);
   const [videoUploadError, setVideoUploadError] = useState('');
 
   // Lock body scroll when modal is open
@@ -376,8 +376,8 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
         bunny_video_id: item?.bunny_video_id || '',
         bunny_video_status: item?.bunny_video_status || '',
       });
-      setVideoUploading(false);
-      setVideoUploadProgress(0);
+      setPendingVideoUpload(null);
+      setVideoCreating(false);
       setVideoUploadError('');
     }
   }, [isOpen, item]);
@@ -389,52 +389,39 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
   const handleVideoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setVideoUploading(true);
-    setVideoUploadProgress(0);
+    setVideoCreating(true);
     setVideoUploadError('');
     try {
-      const result = await createBunnyVideo(formData.title || file.name);
+      const result = await prepareVideoUpload(formData.title || file.name, file);
       handleChange('bunny_video_id', result.videoId);
       handleChange('bunny_video_status', 'uploading');
-
-      tusUploadRef.current = uploadBunnyVideo(
-        file,
-        result.tusConfig,
-        (progress) => setVideoUploadProgress(progress),
-        () => {
-          setVideoUploading(false);
-          setVideoUploadProgress(100);
-          handleChange('bunny_video_status', 'processing');
-        },
-        (error) => {
-          setVideoUploading(false);
-          setVideoUploadError('Upload failed. Please try again.');
-          console.error('Video upload error:', error);
-        }
-      );
+      setPendingVideoUpload(result);
+      setVideoCreating(false);
     } catch (err) {
-      setVideoUploading(false);
-      setVideoUploadError('Failed to start upload. Please try again.');
-      console.error('Error creating Bunny video:', err);
+      setVideoCreating(false);
+      setVideoUploadError('Failed to prepare video. Please try again.');
+      console.error('Error preparing video:', err);
     }
   };
 
   const handleRemoveVideo = async () => {
-    if (formData.bunny_video_id) {
+    if (formData.bunny_video_id && !pendingVideoUpload) {
       try {
         await deleteBunnyVideo(formData.bunny_video_id);
       } catch (err) {
         console.error('Failed to delete Bunny video:', err);
       }
     }
-    if (tusUploadRef.current) {
-      tusUploadRef.current.abort();
-      tusUploadRef.current = null;
+    if (pendingVideoUpload && formData.bunny_video_id) {
+      try {
+        await deleteBunnyVideo(formData.bunny_video_id);
+      } catch (err) {
+        console.error('Failed to delete Bunny video:', err);
+      }
     }
     handleChange('bunny_video_id', '');
     handleChange('bunny_video_status', '');
-    setVideoUploading(false);
-    setVideoUploadProgress(0);
+    setPendingVideoUpload(null);
     setVideoUploadError('');
   };
 
@@ -483,7 +470,7 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
     if (!formData.title.trim()) return;
     setSaving(true);
     try {
-      await onSave(formData);
+      await onSave(formData, pendingVideoUpload);
       onClose();
     } catch (err) {
       console.error('Error saving content:', err);
@@ -552,23 +539,18 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
               <div style={styles.videoStatusRow}>
                 <VideoIcon />
                 <span style={styles.videoStatusText}>
-                  {videoUploading ? `Uploading... ${videoUploadProgress}%` :
-                   formData.bunny_video_status === 'processing' ? 'Submitted for processing - safe to save' :
+                  {pendingVideoUpload ? 'Video ready - will upload in background after save' :
+                   formData.bunny_video_status === 'processing' ? 'Processing' :
                    formData.bunny_video_status === 'ready' ? 'Ready' : 'Uploaded'}
                 </span>
               </div>
-              {videoUploading && (
-                <div style={styles.videoProgressBar}>
-                  <div style={{ ...styles.videoProgressFill, width: `${videoUploadProgress}%` }} />
-                </div>
-              )}
               <button style={styles.removeBtn} onClick={handleRemoveVideo}>Remove Video</button>
             </div>
           ) : (
             <label style={styles.uploadBtn}>
               <VideoIcon />
-              <span>{videoUploading ? `Uploading... ${videoUploadProgress}%` : 'Upload Video'}</span>
-              <input type="file" accept="video/*" onChange={handleVideoUpload} style={{ display: 'none' }} disabled={videoUploading} />
+              <span>{videoCreating ? 'Preparing...' : 'Upload Video'}</span>
+              <input type="file" accept="video/*" onChange={handleVideoUpload} style={{ display: 'none' }} disabled={videoCreating} />
             </label>
           )}
           {videoUploadError && (
@@ -595,13 +577,13 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
         <div style={styles.toggleGroup}>
           <div style={styles.toggleRow}>
             <span style={styles.toggleLabel}>Downloadable</span>
-            <button style={{ ...styles.toggle, backgroundColor: formData.is_downloadable ? '#004B87' : '#e2e8f0' }} onClick={() => handleChange('is_downloadable', !formData.is_downloadable)}>
+            <button style={{ ...styles.toggle, backgroundColor: formData.is_downloadable ? '#1e40af' : '#e2e8f0' }} onClick={() => handleChange('is_downloadable', !formData.is_downloadable)}>
               <div style={{ ...styles.toggleKnob, transform: formData.is_downloadable ? 'translateX(20px)' : 'translateX(0)' }} />
             </button>
           </div>
           <div style={styles.toggleRow}>
             <span style={styles.toggleLabel}>Use Company Logo as Thumbnail</span>
-            <button style={{ ...styles.toggle, backgroundColor: formData.use_company_logo ? '#004B87' : '#e2e8f0' }} onClick={() => handleChange('use_company_logo', !formData.use_company_logo)}>
+            <button style={{ ...styles.toggle, backgroundColor: formData.use_company_logo ? '#1e40af' : '#e2e8f0' }} onClick={() => handleChange('use_company_logo', !formData.use_company_logo)}>
               <div style={{ ...styles.toggleKnob, transform: formData.use_company_logo ? 'translateX(20px)' : 'translateX(0)' }} />
             </button>
           </div>
@@ -616,21 +598,21 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
 };
 
 // Multi-Category Content Modal
-const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories, trainingCategories, formsCategories, type }) => {
+const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories, trainingCategories, type }) => {
   const modalRef = React.useRef(null);
   const scrollYRef = React.useRef(0);
-  const tusUploadRef = useRef(null);
+  const { prepareVideoUpload } = useContent();
   const [formData, setFormData] = useState({
     title: '', description: '', thumbnail_url: '', file_url: '', file_name: '',
     external_link: '', external_link_label: '', quiz_link: '', quiz_link_label: '',
     is_downloadable: true, use_company_logo: false,
     bunny_video_id: '', bunny_video_status: '',
   });
+  const [pendingVideoUpload, setPendingVideoUpload] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [videoUploading, setVideoUploading] = useState(false);
-  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [videoCreating, setVideoCreating] = useState(false);
   const [videoUploadError, setVideoUploadError] = useState('');
 
   // Lock body scroll when modal is open
@@ -666,8 +648,8 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
         bunny_video_id: '', bunny_video_status: '',
       });
       setSelectedCategories([]);
-      setVideoUploading(false);
-      setVideoUploadProgress(0);
+      setPendingVideoUpload(null);
+      setVideoCreating(false);
       setVideoUploadError('');
     }
   }, [isOpen]);
@@ -696,33 +678,18 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
   const handleVideoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setVideoUploading(true);
-    setVideoUploadProgress(0);
+    setVideoCreating(true);
     setVideoUploadError('');
     try {
-      const result = await createBunnyVideo(formData.title || file.name);
+      const result = await prepareVideoUpload(formData.title || file.name, file);
       handleChange('bunny_video_id', result.videoId);
       handleChange('bunny_video_status', 'uploading');
-
-      tusUploadRef.current = uploadBunnyVideo(
-        file,
-        result.tusConfig,
-        (progress) => setVideoUploadProgress(progress),
-        () => {
-          setVideoUploading(false);
-          setVideoUploadProgress(100);
-          handleChange('bunny_video_status', 'processing');
-        },
-        (error) => {
-          setVideoUploading(false);
-          setVideoUploadError('Upload failed. Please try again.');
-          console.error('Video upload error:', error);
-        }
-      );
+      setPendingVideoUpload(result);
+      setVideoCreating(false);
     } catch (err) {
-      setVideoUploading(false);
-      setVideoUploadError('Failed to start upload. Please try again.');
-      console.error('Error creating Bunny video:', err);
+      setVideoCreating(false);
+      setVideoUploadError('Failed to prepare video. Please try again.');
+      console.error('Error preparing video:', err);
     }
   };
 
@@ -734,14 +701,9 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
         console.error('Failed to delete Bunny video:', err);
       }
     }
-    if (tusUploadRef.current) {
-      tusUploadRef.current.abort();
-      tusUploadRef.current = null;
-    }
     handleChange('bunny_video_id', '');
     handleChange('bunny_video_status', '');
-    setVideoUploading(false);
-    setVideoUploadProgress(0);
+    setPendingVideoUpload(null);
     setVideoUploadError('');
   };
 
@@ -790,7 +752,7 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
     if (!formData.title.trim() || selectedCategories.length === 0) return;
     setSaving(true);
     try {
-      await onSave(formData, selectedCategories);
+      await onSave(formData, selectedCategories, pendingVideoUpload);
       onClose();
     } catch (err) {
       console.error('Error saving content:', err);
@@ -838,23 +800,6 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
             <div style={styles.categorySection}>
               <div style={styles.categorySectionTitle}>Training & Development</div>
               {trainingCategories.map(cat => (
-                <label key={cat.id} style={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(cat.id)}
-                    onChange={() => toggleCategory(cat.id)}
-                    style={styles.checkbox}
-                  />
-                  <span style={styles.checkboxLabel}>{cat.title}</span>
-                </label>
-              ))}
-            </div>
-          )}
-
-          {formsCategories && formsCategories.length > 0 && (
-            <div style={styles.categorySection}>
-              <div style={styles.categorySectionTitle}>Forms</div>
-              {formsCategories.map(cat => (
                 <label key={cat.id} style={styles.checkboxRow}>
                   <input
                     type="checkbox"
@@ -924,23 +869,18 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
               <div style={styles.videoStatusRow}>
                 <VideoIcon />
                 <span style={styles.videoStatusText}>
-                  {videoUploading ? `Uploading... ${videoUploadProgress}%` :
-                   formData.bunny_video_status === 'processing' ? 'Submitted for processing - safe to save' :
+                  {pendingVideoUpload ? 'Video ready - will upload in background after save' :
+                   formData.bunny_video_status === 'processing' ? 'Processing' :
                    formData.bunny_video_status === 'ready' ? 'Ready' : 'Uploaded'}
                 </span>
               </div>
-              {videoUploading && (
-                <div style={styles.videoProgressBar}>
-                  <div style={{ ...styles.videoProgressFill, width: `${videoUploadProgress}%` }} />
-                </div>
-              )}
               <button style={styles.removeBtn} onClick={handleRemoveVideo}>Remove Video</button>
             </div>
           ) : (
             <label style={styles.uploadBtn}>
               <VideoIcon />
-              <span>{videoUploading ? `Uploading... ${videoUploadProgress}%` : 'Upload Video'}</span>
-              <input type="file" accept="video/*" onChange={handleVideoUpload} style={{ display: 'none' }} disabled={videoUploading} />
+              <span>{videoCreating ? 'Preparing...' : 'Upload Video'}</span>
+              <input type="file" accept="video/*" onChange={handleVideoUpload} style={{ display: 'none' }} disabled={videoCreating} />
             </label>
           )}
           {videoUploadError && (
@@ -967,13 +907,13 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
         <div style={styles.toggleGroup}>
           <div style={styles.toggleRow}>
             <span style={styles.toggleLabel}>Downloadable</span>
-            <button style={{ ...styles.toggle, backgroundColor: formData.is_downloadable ? '#004B87' : '#e2e8f0' }} onClick={() => handleChange('is_downloadable', !formData.is_downloadable)}>
+            <button style={{ ...styles.toggle, backgroundColor: formData.is_downloadable ? '#1e40af' : '#e2e8f0' }} onClick={() => handleChange('is_downloadable', !formData.is_downloadable)}>
               <div style={{ ...styles.toggleKnob, transform: formData.is_downloadable ? 'translateX(20px)' : 'translateX(0)' }} />
             </button>
           </div>
           <div style={styles.toggleRow}>
             <span style={styles.toggleLabel}>Use Company Logo as Thumbnail</span>
-            <button style={{ ...styles.toggle, backgroundColor: formData.use_company_logo ? '#004B87' : '#e2e8f0' }} onClick={() => handleChange('use_company_logo', !formData.use_company_logo)}>
+            <button style={{ ...styles.toggle, backgroundColor: formData.use_company_logo ? '#1e40af' : '#e2e8f0' }} onClick={() => handleChange('use_company_logo', !formData.use_company_logo)}>
               <div style={{ ...styles.toggleKnob, transform: formData.use_company_logo ? 'translateX(20px)' : 'translateX(0)' }} />
             </button>
           </div>
@@ -991,14 +931,15 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
 const ManageContentScreen = ({ type, title, backPath }) => {
   const navigate = useNavigate();
   const {
-    libraryCategories, trainingCategories, formsCategories,
+    libraryCategories, trainingCategories,
     addCategory, updateCategory, deleteCategory,
     addContentItem, addContentToCategories, updateContentItem, deleteContentItem,
     removeContentFromCategory,
     reorderCategories, reorderContentItems,
+    startBackgroundUpload, videoUploads,
   } = useContent();
 
-  const categories = type === 'library' ? libraryCategories : type === 'forms' ? formsCategories : trainingCategories;
+  const categories = type === 'library' ? libraryCategories : trainingCategories;
 
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null });
   const [contentModal, setContentModal] = useState({ open: false, item: null, categoryId: null });
@@ -1036,16 +977,26 @@ const ManageContentScreen = ({ type, title, backPath }) => {
     }
   };
 
-  const handleSaveContent = async (data) => {
+  const handleSaveContent = async (data, pendingVideo) => {
+    let savedItem;
     if (contentModal.item) {
       await updateContentItem(contentModal.item.id, data);
+      savedItem = contentModal.item;
     } else {
-      await addContentItem(contentModal.categoryId, data);
+      savedItem = await addContentItem(contentModal.categoryId, data);
+    }
+    console.log('handleSaveContent - pendingVideo:', pendingVideo, 'savedItem:', savedItem);
+    if (pendingVideo && savedItem?.id) {
+      console.log('Starting background upload for', savedItem.id);
+      startBackgroundUpload(savedItem.id, pendingVideo.file, pendingVideo.tusConfig);
     }
   };
 
-  const handleSaveMultiCategoryContent = async (data, selectedCategoryIds) => {
-    await addContentToCategories(data, selectedCategoryIds);
+  const handleSaveMultiCategoryContent = async (data, selectedCategoryIds, pendingVideo) => {
+    const savedItem = await addContentToCategories(data, selectedCategoryIds);
+    if (pendingVideo && savedItem?.id) {
+      startBackgroundUpload(savedItem.id, pendingVideo.file, pendingVideo.tusConfig);
+    }
   };
 
   const confirmDelete = async (deleteEverywhere = true) => {
@@ -1108,7 +1059,7 @@ const ManageContentScreen = ({ type, title, backPath }) => {
                       onEditContent={(item) => setContentModal({ open: true, item, categoryId: category.id })}
                       onDeleteContent={(item) => {
                         // Count how many categories this item is in
-                        const allCats = [...libraryCategories, ...trainingCategories, ...formsCategories];
+                        const allCats = [...libraryCategories, ...trainingCategories];
                         const categoryCount = allCats.filter(c => c.items.some(i => i.id === item.id)).length;
                         setDeleteConfirm({ open: true, type: 'content', id: item.id, name: item.title, categoryId: category.id, isMultiCategory: categoryCount > 1 });
                       }}
@@ -1164,7 +1115,6 @@ const ManageContentScreen = ({ type, title, backPath }) => {
         onSave={handleSaveMultiCategoryContent}
         libraryCategories={libraryCategories}
         trainingCategories={trainingCategories}
-        formsCategories={formsCategories}
         type={type}
       />
 
@@ -1202,13 +1152,13 @@ const styles = {
   container: { minHeight: '100%', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' },
   header: { width: '100%', backgroundColor: '#ffffff', position: 'sticky', top: 0, zIndex: 100 },
   headerInner: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 8px 16px', maxWidth: '600px', margin: '0 auto' },
-  headerTitle: { color: '#004B87', fontSize: '20px', fontWeight: '700', margin: 0, textAlign: 'center' },
+  headerTitle: { color: '#1e40af', fontSize: '20px', fontWeight: '700', margin: 0, textAlign: 'center' },
   headerBorder: { maxWidth: '600px', margin: '0 auto', height: '2px', backgroundColor: 'rgba(30, 64, 175, 0.15)', borderRadius: '1px' },
-  backBtn: { width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: '#004B87', borderRadius: '10px' },
+  backBtn: { width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: '#1e40af', borderRadius: '10px' },
   contentContainer: { flex: 1, display: 'flex', justifyContent: 'center', overflow: 'auto' },
   content: { width: '100%', maxWidth: '600px', padding: '16px' },
-  addCategoryBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: '#004B87', color: '#ffffff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' },
-  addMultiContentBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: '#ffffff', color: '#004B87', border: '2px solid #004B87', borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginBottom: '20px' },
+  addCategoryBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: '#1e40af', color: '#ffffff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' },
+  addMultiContentBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', backgroundColor: '#ffffff', color: '#1e40af', border: '2px solid #1e40af', borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginBottom: '20px' },
   categoriesList: { display: 'flex', flexDirection: 'column', gap: '12px' },
   categoryCard: { backgroundColor: '#ffffff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)' },
   categoryHeader: { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px' },
@@ -1221,7 +1171,7 @@ const styles = {
   expandIcon: { transition: 'transform 0.2s', cursor: 'pointer', padding: '4px' },
   iconBtn: { width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748b' },
   categoryContent: { padding: '0 16px 16px 16px', borderTop: '1px solid #f1f5f9' },
-  addContentBtn: { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', backgroundColor: '#f1f5f9', color: '#004B87', border: '1px dashed #cbd5e1', borderRadius: '10px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', marginBottom: '12px', marginTop: '12px', width: '100%', justifyContent: 'center' },
+  addContentBtn: { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', backgroundColor: '#f1f5f9', color: '#1e40af', border: '1px dashed #cbd5e1', borderRadius: '10px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', marginBottom: '12px', marginTop: '12px', width: '100%', justifyContent: 'center' },
   itemsList: { display: 'flex', flexDirection: 'column', gap: '8px' },
   itemCard: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '10px' },
   itemThumbnail: { width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#e2e8f0', flexShrink: 0 },
@@ -1242,7 +1192,7 @@ const styles = {
   label: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#64748b', marginBottom: '6px' },
   input: { width: '100%', padding: '12px 14px', fontSize: '15px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', boxSizing: 'border-box' },
   textarea: { width: '100%', padding: '12px 14px', fontSize: '15px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' },
-  saveBtn: { width: '100%', padding: '14px', backgroundColor: '#004B87', color: '#ffffff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' },
+  saveBtn: { width: '100%', padding: '14px', backgroundColor: '#1e40af', color: '#ffffff', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' },
   uploadBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', backgroundColor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', cursor: 'pointer', color: '#64748b', fontSize: '14px' },
   thumbnailPreview: { display: 'flex', alignItems: 'center', gap: '12px' },
   previewImage: { width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' },
@@ -1268,9 +1218,9 @@ const styles = {
   // Multi-category modal styles
   categoryHint: { fontSize: '13px', color: '#64748b', margin: '0 0 12px 0' },
   categorySection: { marginBottom: '16px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '10px' },
-  categorySectionTitle: { fontSize: '13px', fontWeight: '600', color: '#004B87', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  categorySectionTitle: { fontSize: '13px', fontWeight: '600', color: '#1e40af', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' },
   checkboxRow: { display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', cursor: 'pointer' },
-  checkbox: { width: '18px', height: '18px', cursor: 'pointer', accentColor: '#004B87' },
+  checkbox: { width: '18px', height: '18px', cursor: 'pointer', accentColor: '#1e40af' },
   checkboxLabel: { fontSize: '14px', color: '#1e293b' },
   selectedCount: { fontSize: '13px', color: '#059669', fontWeight: '500', padding: '8px 12px', backgroundColor: '#ecfdf5', borderRadius: '8px', textAlign: 'center' },
   // Video upload styles
@@ -1278,7 +1228,7 @@ const styles = {
   videoStatusRow: { display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b' },
   videoStatusText: { fontSize: '14px', fontWeight: '500' },
   videoProgressBar: { width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' },
-  videoProgressFill: { height: '100%', backgroundColor: '#004B87', borderRadius: '3px', transition: 'width 0.3s ease' },
+  videoProgressFill: { height: '100%', backgroundColor: '#1e40af', borderRadius: '3px', transition: 'width 0.3s ease' },
   videoErrorText: { color: '#dc2626', fontSize: '13px', margin: '6px 0 0 0' },
 };
 

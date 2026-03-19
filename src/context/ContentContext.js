@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../config/supabase';
-import { deleteBunnyVideo, getBunnyVideoStatus } from '../services/bunnyVideo';
+import { deleteBunnyVideo, getBunnyVideoStatus, createBunnyVideo, uploadBunnyVideo } from '../services/bunnyVideo';
 
 const ContentContext = createContext({});
 
@@ -15,6 +15,59 @@ export const useContent = () => {
 
 export const ContentProvider = ({ children }) => {
   const { user } = useAuth();
+
+  // Background video uploads: { [contentItemId]: { progress, status, upload } }
+  const [videoUploads, setVideoUploads] = useState({});
+  const uploadsRef = useRef({});
+
+  // Start a background video upload for a saved content item
+  const startBackgroundUpload = (contentItemId, file, tusConfig) => {
+    console.log('startBackgroundUpload called:', { contentItemId, fileName: file?.name, fileSize: file?.size, tusConfig });
+    const upload = uploadBunnyVideo(
+      file,
+      tusConfig,
+      (progress) => {
+        setVideoUploads(prev => ({ ...prev, [contentItemId]: { ...prev[contentItemId], progress } }));
+      },
+      async () => {
+        // Upload complete - update DB and local state
+        await supabase
+          .from('content_items')
+          .update({ bunny_video_status: 'processing' })
+          .eq('id', contentItemId);
+
+        const updateState = (prev) => prev.map(c => ({
+          ...c,
+          items: c.items.map(i => i.id === contentItemId ? { ...i, bunny_video_status: 'processing' } : i),
+        }));
+        setLibraryCategories(updateState);
+        setTrainingCategories(updateState);
+        setFormsCategories(updateState);
+
+        // Clean up from uploads tracking
+        setVideoUploads(prev => {
+          const next = { ...prev };
+          delete next[contentItemId];
+          return next;
+        });
+        delete uploadsRef.current[contentItemId];
+      },
+      (error) => {
+        console.error('Background video upload failed:', error);
+        setVideoUploads(prev => ({ ...prev, [contentItemId]: { ...prev[contentItemId], status: 'error', progress: 0 } }));
+        delete uploadsRef.current[contentItemId];
+      }
+    );
+
+    uploadsRef.current[contentItemId] = upload;
+    setVideoUploads(prev => ({ ...prev, [contentItemId]: { progress: 0, status: 'uploading', upload } }));
+  };
+
+  // Prepare a video for background upload (called from modal before save)
+  const prepareVideoUpload = async (title, file) => {
+    const result = await createBunnyVideo(title);
+    return { videoId: result.videoId, tusConfig: result.tusConfig, file };
+  };
 
   // Categories and items state
   const [libraryCategories, setLibraryCategories] = useState([]);
@@ -136,7 +189,7 @@ export const ContentProvider = ({ children }) => {
         });
       });
 
-      // Separate library and training categories with their items
+      // Separate library, training, and forms categories with their items
       const library = [];
       const training = [];
       const forms = [];
@@ -780,6 +833,11 @@ export const ContentProvider = ({ children }) => {
     deleteContentItem,
     removeContentFromCategory, // Remove from ONE category only
     reorderContentItems,
+
+    // Background video uploads
+    videoUploads,
+    prepareVideoUpload,
+    startBackgroundUpload,
   };
 
   return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;

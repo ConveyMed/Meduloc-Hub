@@ -658,7 +658,7 @@ const styles = {
     margin: '0 auto',
   },
   headerTitle: {
-    color: '#004B87',
+    color: '#1e40af',
     fontSize: '24px',
     fontWeight: '700',
     margin: 0,
@@ -728,7 +728,7 @@ const styles = {
     color: '#1e293b',
     margin: '0 0 12px 0',
     paddingBottom: '4px',
-    borderBottom: '2px solid #004B87',
+    borderBottom: '2px solid #1e40af',
     display: 'inline-block',
   },
   horizontalScroll: {
@@ -983,7 +983,7 @@ const styles = {
     gap: '10px',
     width: '100%',
     padding: '14px 16px',
-    backgroundColor: '#004B87',
+    backgroundColor: '#1e40af',
     borderRadius: '12px',
     border: 'none',
     cursor: 'pointer',
@@ -996,7 +996,7 @@ const styles = {
     backgroundColor: '#10b981',
   },
   downloadBtnDownloading: {
-    backgroundColor: '#004B87',
+    backgroundColor: '#1e40af',
     cursor: 'not-allowed',
   },
 
@@ -1021,7 +1021,7 @@ const styles = {
     alignItems: 'center',
     gap: '10px',
     padding: '12px 16px',
-    backgroundColor: '#004B87',
+    backgroundColor: '#1e40af',
     borderRadius: '10px',
     color: '#ffffff',
     fontSize: '14px',
@@ -1106,7 +1106,7 @@ const styles = {
     width: '28px',
     height: '28px',
     border: '3px solid #e2e8f0',
-    borderTopColor: '#004B87',
+    borderTopColor: '#1e40af',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },

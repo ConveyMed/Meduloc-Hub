@@ -51,6 +51,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>This app uses the camera to take profile photos and upload images.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to your microphone to record video with audio.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app accesses your photo library to select profile photos and images.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

@@ -240,8 +240,9 @@ function AppContent() {
           case 'post_liked':
           case 'post_commented':
           case 'comment_replied':
-            // Navigate to home and scroll to post
+            // Navigate to home, refresh posts, and scroll to the relevant post
             navigate('/home');
+            window.dispatchEvent(new CustomEvent('refreshPosts'));
             if (data.post_id) {
               setTimeout(() => {
                 const postElement = document.getElementById(`post-${data.post_id}`);

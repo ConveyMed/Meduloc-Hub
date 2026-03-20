@@ -239,12 +239,25 @@ export const PostsProvider = ({ children }) => {
           setPosts(prev => prev.filter(p => p.id !== payload.old.id));
         }
       )
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'post_comments' },
+        () => {
+          loadPosts(true);
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
+
+  // Listen for refresh requests from notification deep links
+  useEffect(() => {
+    const handleRefresh = () => loadPosts(true);
+    window.addEventListener('refreshPosts', handleRefresh);
+    return () => window.removeEventListener('refreshPosts', handleRefresh);
+  }, []);
 
   // Computed loading - only true if actually loading AND no data yet
   const isLoading = loading && posts.length === 0;

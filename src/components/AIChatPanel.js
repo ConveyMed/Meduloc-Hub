@@ -94,6 +94,8 @@ const AIChatPanel = () => {
     isHistoryOpen,
     toggleHistory,
     loadFromHistory,
+    aiConsentAcknowledged,
+    acknowledgeAiConsent,
   } = useAIChat();
 
   const [question, setQuestion] = useState('');
@@ -188,6 +190,37 @@ const AIChatPanel = () => {
   };
 
   if (!isOpen) return null;
+
+  // Show consent prompt on first use
+  if (!aiConsentAcknowledged) {
+    return (
+      <>
+        <div style={styles.backdrop} onClick={closeChat} />
+        <div style={styles.panel}>
+          <div style={styles.dragHandleArea} onClick={closeChat}>
+            <div style={styles.dragHandle} />
+          </div>
+          <div style={consentStyles.container}>
+            <div style={consentStyles.iconWrap}>
+              <AIBotIcon />
+            </div>
+            <h2 style={consentStyles.title}>AI Product Assistant</h2>
+            <p style={consentStyles.text}>
+              This feature uses Google Gemini to answer your product questions. Only your question
+              and product documentation are processed. No personal information is shared or stored
+              by the AI service. Your prompts are not used to train AI models.
+            </p>
+            <p style={consentStyles.link}>
+              For full details, see our <a href="/privacy" style={consentStyles.linkText}>Privacy Policy</a>.
+            </p>
+            <button style={consentStyles.button} onClick={acknowledgeAiConsent}>
+              Got It
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -1094,6 +1127,61 @@ const styles = {
     color: '#ffffff',
     cursor: 'pointer',
     flexShrink: 0,
+  },
+};
+
+const consentStyles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 24px',
+    textAlign: 'center',
+    flex: 1,
+  },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: '50%',
+    backgroundColor: '#f0f4f8',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    color: '#004B87',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 600,
+    color: '#1a1a1a',
+    margin: '0 0 16px 0',
+  },
+  text: {
+    fontSize: 14,
+    lineHeight: '1.6',
+    color: '#555',
+    margin: '0 0 12px 0',
+    maxWidth: 360,
+  },
+  link: {
+    fontSize: 13,
+    color: '#777',
+    margin: '0 0 28px 0',
+  },
+  linkText: {
+    color: '#004B87',
+    textDecoration: 'underline',
+  },
+  button: {
+    padding: '14px 48px',
+    borderRadius: 8,
+    border: 'none',
+    backgroundColor: '#004B87',
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 600,
+    cursor: 'pointer',
   },
 };
 

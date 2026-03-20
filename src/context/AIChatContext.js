@@ -33,6 +33,33 @@ export const AIChatProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [aiConsentAcknowledged, setAiConsentAcknowledged] = useState(false);
+
+  // Check if user has already acknowledged AI consent
+  useEffect(() => {
+    if (!user) return;
+    const checkConsent = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('ai_consent_acknowledged')
+        .eq('id', user.id)
+        .single();
+      if (data?.ai_consent_acknowledged) {
+        setAiConsentAcknowledged(true);
+      }
+    };
+    checkConsent();
+  }, [user]);
+
+  // Acknowledge AI consent and save to Supabase
+  const acknowledgeAiConsent = useCallback(async () => {
+    if (!user) return;
+    await supabase
+      .from('users')
+      .update({ ai_consent_acknowledged: true })
+      .eq('id', user.id);
+    setAiConsentAcknowledged(true);
+  }, [user]);
 
   // Fetch products from Supabase (wait for auth)
   useEffect(() => {
@@ -258,6 +285,8 @@ export const AIChatProvider = ({ children }) => {
     isHistoryOpen,
     toggleHistory,
     loadFromHistory,
+    aiConsentAcknowledged,
+    acknowledgeAiConsent,
   };
 
   return (

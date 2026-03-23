@@ -73,8 +73,8 @@ const OrganizationGate = ({ onVerified }) => {
           </button>
         </form>
       </div>
-      <p style={{ marginTop: '24px', fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
-        Produced by <a href="https://appcatalyst.org" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline' }}>AppCatalyst</a> for ConveyMed
+      <p style={{ marginTop: '24px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.15)' }}>
+        Produced by <a href="https://appcatalyst.org" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>AppCatalyst</a> for ConveyMed
       </p>
     </div>
   );

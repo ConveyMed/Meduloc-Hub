@@ -312,7 +312,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, category, title }) => {
 };
 
 // Content Item Modal
-const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
+const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type, categories = [], itemCategoryIds = [] }) => {
   const modalRef = React.useRef(null);
   const scrollYRef = React.useRef(0);
   const { prepareVideoUpload } = useContent();
@@ -322,6 +322,8 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
     is_downloadable: true, use_company_logo: false,
     bunny_video_id: '', bunny_video_status: '',
   });
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [categoryError, setCategoryError] = useState('');
   const [pendingVideoUpload, setPendingVideoUpload] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -379,8 +381,10 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
       setPendingVideoUpload(null);
       setVideoCreating(false);
       setVideoUploadError('');
+      setSelectedCategories(itemCategoryIds.length > 0 ? [...itemCategoryIds] : []);
+      setCategoryError('');
     }
-  }, [isOpen, item]);
+  }, [isOpen, item, itemCategoryIds]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -466,11 +470,22 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
     }
   };
 
+  const toggleCategory = (catId) => {
+    setCategoryError('');
+    setSelectedCategories(prev =>
+      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+    );
+  };
+
   const handleSave = async () => {
     if (!formData.title.trim()) return;
+    if (item && categories.length > 0 && selectedCategories.length === 0) {
+      setCategoryError('At least one category must be selected');
+      return;
+    }
     setSaving(true);
     try {
-      await onSave(formData, pendingVideoUpload);
+      await onSave(formData, pendingVideoUpload, selectedCategories);
       onClose();
     } catch (err) {
       console.error('Error saving content:', err);
@@ -489,6 +504,40 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type }) => {
           <CloseIcon />
         </button>
         <h2 style={styles.modalTitle}>{title}</h2>
+
+        {item && categories.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <label style={styles.label}>Categories</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {categories.map(cat => {
+                const isSelected = selectedCategories.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => toggleCategory(cat.id)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '20px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      border: isSelected ? '2px solid #1e40af' : '2px solid #e2e8f0',
+                      backgroundColor: isSelected ? '#dbeafe' : '#ffffff',
+                      color: isSelected ? '#1e40af' : '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    {isSelected && <span style={{ fontWeight: '700' }}>+</span>}
+                    {cat.title}
+                  </button>
+                );
+              })}
+            </div>
+            {categoryError && <p style={{ color: '#ef4444', fontSize: '13px', margin: '6px 0 0 0' }}>{categoryError}</p>}
+          </div>
+        )}
 
         <div style={styles.formGroup}>
           <label style={styles.label}>Title *</label>
@@ -933,7 +982,7 @@ const ManageContentScreen = ({ type, title, backPath }) => {
   const {
     libraryCategories, trainingCategories,
     addCategory, updateCategory, deleteCategory,
-    addContentItem, addContentToCategories, updateContentItem, deleteContentItem,
+    addContentItem, addContentToCategories, updateContentItem, updateContentCategories, deleteContentItem,
     removeContentFromCategory,
     reorderCategories, reorderContentItems,
     startBackgroundUpload, videoUploads,
@@ -977,11 +1026,15 @@ const ManageContentScreen = ({ type, title, backPath }) => {
     }
   };
 
-  const handleSaveContent = async (data, pendingVideo) => {
+  const handleSaveContent = async (data, pendingVideo, selectedCategoryIds) => {
     let savedItem;
     if (contentModal.item) {
       await updateContentItem(contentModal.item.id, data);
       savedItem = contentModal.item;
+      // Update category assignments if categories were changed
+      if (selectedCategoryIds && selectedCategoryIds.length > 0) {
+        await updateContentCategories(contentModal.item.id, selectedCategoryIds);
+      }
     } else {
       savedItem = await addContentItem(contentModal.categoryId, data);
     }
@@ -1107,6 +1160,8 @@ const ManageContentScreen = ({ type, title, backPath }) => {
         item={contentModal.item}
         title={contentModal.item ? 'Edit Content' : 'Add Content'}
         type={type}
+        categories={categories}
+        itemCategoryIds={contentModal.item ? categories.filter(c => c.items.some(i => i.id === contentModal.item.id)).map(c => c.id) : [contentModal.categoryId].filter(Boolean)}
       />
 
       <MultiCategoryContentModal

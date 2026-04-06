@@ -100,6 +100,8 @@ const AIChatPanel = () => {
 
   const [question, setQuestion] = useState('');
   const [copied, setCopied] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [consentDismissed, setConsentDismissed] = useState(false);
   const textareaRef = useRef(null);
   const contentRef = useRef(null);
 
@@ -191,8 +193,15 @@ const AIChatPanel = () => {
 
   if (!isOpen) return null;
 
-  // Show consent prompt on first use
-  if (!aiConsentAcknowledged) {
+  const handleConsentContinue = () => {
+    if (dontShowAgain) {
+      acknowledgeAiConsent();
+    }
+    setConsentDismissed(true);
+  };
+
+  // Show consent prompt every time unless they checked "don't show again" (saved to Supabase)
+  if (!aiConsentAcknowledged && !consentDismissed) {
     return (
       <>
         <div style={styles.backdrop} onClick={closeChat} />
@@ -213,8 +222,18 @@ const AIChatPanel = () => {
             <p style={consentStyles.link}>
               For full details, see our <a href="/privacy" style={consentStyles.linkText}>Privacy Policy</a>.
             </p>
-            <button style={consentStyles.button} onClick={acknowledgeAiConsent}>
-              Got It
+            <label style={consentStyles.checkboxRow} onClick={() => setDontShowAgain(!dontShowAgain)}>
+              <div style={{
+                ...consentStyles.checkbox,
+                backgroundColor: dontShowAgain ? '#004B87' : 'transparent',
+                borderColor: dontShowAgain ? '#004B87' : '#cbd5e1',
+              }}>
+                {dontShowAgain && <span style={consentStyles.checkmark}>&#10003;</span>}
+              </div>
+              <span style={consentStyles.checkboxLabel}>Do not show this again</span>
+            </label>
+            <button style={consentStyles.button} onClick={handleConsentContinue}>
+              Continue
             </button>
           </div>
         </div>
@@ -1172,6 +1191,35 @@ const consentStyles = {
   linkText: {
     color: '#004B87',
     textDecoration: 'underline',
+  },
+  checkboxRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    cursor: 'pointer',
+    margin: '0 0 24px 0',
+    userSelect: 'none',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    border: '2px solid #cbd5e1',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 700,
+    lineHeight: 1,
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#555',
   },
   button: {
     padding: '14px 48px',

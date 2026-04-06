@@ -650,6 +650,36 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
+  // Update which categories an item belongs to (delete old, insert new)
+  const updateContentCategories = async (itemId, categoryIds) => {
+    try {
+      // Delete all existing junction entries
+      await supabase
+        .from('content_item_categories')
+        .delete()
+        .eq('content_id', itemId);
+
+      // Insert new junction entries
+      if (categoryIds.length > 0) {
+        const links = categoryIds.map((catId, index) => ({
+          content_id: itemId,
+          category_id: catId,
+          sort_order: index,
+        }));
+        const { error } = await supabase
+          .from('content_item_categories')
+          .insert(links);
+        if (error) throw error;
+      }
+
+      // Reload to get fresh state
+      await loadAllContent(true);
+    } catch (err) {
+      console.error('Error updating content categories:', err);
+      throw err;
+    }
+  };
+
   // Delete a content item (removes from ALL categories)
   const deleteContentItem = async (itemId) => {
     try {
@@ -830,6 +860,7 @@ export const ContentProvider = ({ children }) => {
     addContentItem,
     addContentToCategories,
     updateContentItem,
+    updateContentCategories,
     deleteContentItem,
     removeContentFromCategory, // Remove from ONE category only
     reorderContentItems,

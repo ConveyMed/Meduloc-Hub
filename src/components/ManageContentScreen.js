@@ -980,7 +980,7 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
 const ManageContentScreen = ({ type, title, backPath }) => {
   const navigate = useNavigate();
   const {
-    libraryCategories, trainingCategories,
+    libraryCategories, trainingCategories, formsCategories,
     addCategory, updateCategory, deleteCategory,
     addContentItem, addContentToCategories, updateContentItem, updateContentCategories, deleteContentItem,
     removeContentFromCategory,
@@ -988,7 +988,7 @@ const ManageContentScreen = ({ type, title, backPath }) => {
     startBackgroundUpload, videoUploads,
   } = useContent();
 
-  const categories = type === 'library' ? libraryCategories : trainingCategories;
+  const categories = type === 'library' ? libraryCategories : type === 'forms' ? formsCategories : trainingCategories;
 
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null });
   const [contentModal, setContentModal] = useState({ open: false, item: null, categoryId: null });

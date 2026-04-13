@@ -1,0 +1,85 @@
+# Meduloc Hub — iOS fastlane config
+# Run from ios/App/ directory:
+#   fastlane status     — check TestFlight processing status
+#   fastlane build      — web + cap sync + archive + export IPA
+#   fastlane upload     — upload the current IPA to App Store Connect
+#   fastlane submit     — attach build to version + submit for review
+#   fastlane release    — full pipeline: build + upload + submit
+
+default_platform(:ios)
+
+# App Store Connect API credentials (ConveyMed team)
+ASC_KEY_ID    = "9MV2H7DUD5"
+ASC_ISSUER_ID = "03e68a23-cd1f-4ae3-aef0-acca2623a3c3"
+ASC_KEY_PATH  = File.expand_path("~/Apps/p8-keys/AuthKey_9MV2H7DUD5.p8")
+
+def asc_key
+  app_store_connect_api_key(
+    key_id:      ASC_KEY_ID,
+    issuer_id:   ASC_ISSUER_ID,
+    key_filepath: ASC_KEY_PATH,
+    in_house:    false
+  )
+end
+
+platform :ios do
+  desc "Show latest TestFlight build + processing status"
+  lane :status do
+    api_key = asc_key
+    latest = latest_testflight_build_number(api_key: api_key)
+    UI.success("Latest TestFlight build number: #{latest}")
+  end
+
+  desc "Web build + Capacitor sync + Xcode archive + export signed IPA"
+  lane :build do
+    Dir.chdir("../..") do
+      sh("npm", "run", "build")
+      sh("npx", "cap", "sync", "ios")
+    end
+    sh("rm", "-rf", "build")
+    build_app(
+      workspace:       "App.xcworkspace",
+      scheme:          "App",
+      configuration:   "Release",
+      export_method:   "app-store",
+      output_directory: "build",
+      output_name:     "Meduloc Hub.ipa",
+      clean:           true
+    )
+  end
+
+  desc "Upload the latest IPA to App Store Connect / TestFlight"
+  lane :upload do
+    upload_to_testflight(
+      api_key:       asc_key,
+      ipa:           "build/Meduloc Hub.ipa",
+      skip_submission: true,                # don't auto-submit to external testers
+      skip_waiting_for_build_processing: false  # wait until Apple finishes processing
+    )
+  end
+
+  desc "Submit current processed build for App Store review"
+  lane :submit do
+    deliver(
+      api_key:                       asc_key,
+      submit_for_review:             true,
+      automatic_release:             true,    # auto-release after Apple approves
+      force:                         true,    # skip HTML preview
+      skip_screenshots:              true,    # metadata-only update
+      skip_metadata:                 false,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        add_id_info_uses_idfa:          false,
+        export_compliance_uses_encryption: false,
+        export_compliance_encryption_updated: false
+      }
+    )
+  end
+
+  desc "Full release: build → upload → wait for processing → submit for review"
+  lane :release do
+    build
+    upload
+    submit
+  end
+end

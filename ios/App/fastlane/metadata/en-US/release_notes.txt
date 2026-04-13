@@ -1,0 +1,1 @@
+Bug fix: Admins can now upload and manage Forms from Profile → Manage Forms. Previously this screen was incorrectly displaying the Training content library.

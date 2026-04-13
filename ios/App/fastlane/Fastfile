@@ -59,9 +59,11 @@ platform :ios do
   end
 
   desc "Submit current processed build for App Store review"
-  lane :submit do
+  lane :submit do |options|
+    version = options[:version] || sh("/usr/libexec/PlistBuddy", "-c", "Print CFBundleShortVersionString", "../App/Info.plist").strip rescue "1.0.1"
     deliver(
       api_key:                       asc_key,
+      app_version:                   version,
       submit_for_review:             true,
       automatic_release:             true,    # auto-release after Apple approves
       force:                         true,    # skip HTML preview

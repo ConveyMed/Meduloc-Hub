@@ -365,7 +365,11 @@ export const logoutOneSignal = async () => {
   if (!OneSignal) return;
 
   try {
-    OneSignal.logout();
+    // Skip if we never logged in — calling OneSignal.logout() with no external ID
+    // throws inside the SDK (LoginManager: cannot read 'Qe' of undefined).
+    if (currentUserId) {
+      await OneSignal.logout();
+    }
     currentUserId = null;
     if (subscriptionListener) {
       OneSignal.User.pushSubscription.removeEventListener('change', subscriptionListener);

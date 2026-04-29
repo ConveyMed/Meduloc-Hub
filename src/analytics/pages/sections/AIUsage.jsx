@@ -1,14 +1,16 @@
-import { useEffect } from 'react'
-import { HiOutlineLightBulb, HiOutlineUsers } from 'react-icons/hi'
+import { useEffect, useState } from 'react'
+import { HiOutlineLightBulb, HiOutlineUsers, HiOutlineQuestionMarkCircle } from 'react-icons/hi'
 import TimeframeSelector from '../../components/TimeframeSelector'
 import StatCardGrid from '../../components/charts/StatCardGrid'
 import DataTable from '../../components/charts/DataTable'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import UnansweredQuestionsModal from '../../components/UnansweredQuestionsModal'
 import useAIUsage from '../../hooks/useAIUsage'
 import { formatNumber } from '../../components/export/exportUtils'
 
 export default function AIUsage() {
   const { data, loading, error, fetchData } = useAIUsage()
+  const [showUnanswered, setShowUnanswered] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -48,8 +50,23 @@ export default function AIUsage() {
           <h1 style={styles.title}>AI Usage</h1>
           <p style={styles.subtitle}>AI feature adoption and usage</p>
         </div>
-        <TimeframeSelector onApply={fetchData} />
+        <div style={styles.headerActions}>
+          <button
+            type="button"
+            onClick={() => setShowUnanswered(true)}
+            style={styles.unansweredButton}
+          >
+            <HiOutlineQuestionMarkCircle style={styles.buttonIcon} />
+            View Unanswered Questions
+          </button>
+          <TimeframeSelector onApply={fetchData} />
+        </div>
       </div>
+
+      <UnansweredQuestionsModal
+        isOpen={showUnanswered}
+        onClose={() => setShowUnanswered(false)}
+      />
 
       {error && (
         <div style={styles.error}>Error: {error}</div>
@@ -117,5 +134,28 @@ const styles = {
     backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px',
     border: '1px solid var(--border)'
+  },
+  headerActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
+  unansweredButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 14px',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    fontWeight: '500',
+    cursor: 'pointer'
+  },
+  buttonIcon: {
+    fontSize: '16px',
+    color: 'var(--accent)'
   }
 }

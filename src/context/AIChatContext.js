@@ -184,19 +184,6 @@ export const AIChatProvider = ({ children }) => {
     setIsLoading(true);
     setError(null);
 
-    // Log AI query for analytics
-    const logQuery = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          logAIQuery(user.id, question.trim(), selectedProduct);
-        }
-      } catch (e) {
-        // Silently fail analytics
-      }
-    };
-    logQuery();
-
     // Start loading animation (non-blocking)
     const loadingPromise = animateLoading();
 
@@ -230,6 +217,21 @@ export const AIChatProvider = ({ children }) => {
 
         // Save conversation to history
         saveConversation(newMessages, selectedProduct, currentConversationId);
+
+        // Log analytics with the AI's confidence so we can surface unanswered questions later
+        const trackQuery = async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            logAIQuery(
+              user.id,
+              question.trim(),
+              selectedProduct,
+              data.confidence || null,
+              Boolean(data.sectionTitle || data.pageNumber)
+            );
+          }
+        };
+        trackQuery();
       } else {
         throw new Error(data.error || 'Failed to get response');
       }

@@ -1,10 +1,11 @@
 /**
  * Analytics Service
- * Tracks user events for Meduloc Hub Analytics dashboard
+ * Tracks user events for ConveyMed Analytics dashboard
  * Uses idb-keyval for offline queue when network unavailable
  */
 
 import { supabase } from '../config/supabase';
+import { supabaseUrl, supabaseAnonKey } from '../config/supabase';
 import { get, set } from 'idb-keyval';
 
 // Keys for offline queue
@@ -197,16 +198,11 @@ export const logSessionEndBeacon = (sessionId) => {
     delete sessionStartTimes[sessionId];
   }
 
-  const supabaseUrl = 'https://nhnpqsbmpypdxdvdqlfq.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5obnBxc2JtcHlwZHhkdmRxbGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NDgzMDgsImV4cCI6MjA4NzEyNDMwOH0.zjEVz-5vQy6kVJfPB81xu5VxxSWnykk5BhX2CkbfY1U';
-
   const url = `${supabaseUrl}/rest/v1/user_sessions?id=eq.${sessionId}`;
   const body = JSON.stringify({
     ended_at: endedAt.toISOString(),
     duration_seconds: durationSeconds,
   });
-
-  const blob = new Blob([body], { type: 'application/json' });
 
   // sendBeacon with headers via fetch keepalive as fallback
   try {
@@ -216,8 +212,8 @@ export const logSessionEndBeacon = (sessionId) => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Prefer': 'return=minimal',
         },
         body,
@@ -268,13 +264,24 @@ export const logAssetEvent = async (userId, assetId, assetName, category, catego
 // ============================================
 
 /**
- * Log an AI query
+ * Log an AI query along with the AI's answer quality.
+ * confidence: 'high' | 'medium' | 'low' | 'none' (returned by ai-chat edge function).
+ * hasCitation: true when the response included a sectionTitle or pageNumber.
+ * Pass nulls if logging before the response (legacy callers).
  */
-export const logAIQuery = async (userId, queryText, productName = null) => {
+export const logAIQuery = async (
+  userId,
+  queryText,
+  productName = null,
+  confidence = null,
+  hasCitation = null
+) => {
   await insertEvent('ai_queries', {
     user_id: userId,
     query_text: queryText,
     product_name: productName,
+    confidence,
+    has_citation: hasCitation,
   });
 };
 

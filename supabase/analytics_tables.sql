@@ -1,5 +1,6 @@
--- Analytics Tables for Demo App
--- Run this migration in Supabase SQL Editor
+-- Analytics Tables
+-- Tracks user activity for ConveyMed Analytics dashboard
+-- Run AFTER 01_users.sql (depends on auth.users)
 
 -- ============================================
 -- USER SESSIONS
@@ -262,3 +263,29 @@ SELECT
 FROM ai_queries
 GROUP BY DATE(created_at)
 ORDER BY date DESC;
+
+-- ============================================
+-- AI ANSWER QUALITY COLUMNS
+-- Captures confidence + citation flag returned by the ai-chat edge function.
+-- Idempotent: safe to re-run on existing DBs.
+-- ============================================
+ALTER TABLE ai_queries ADD COLUMN IF NOT EXISTS confidence VARCHAR(10);
+ALTER TABLE ai_queries ADD COLUMN IF NOT EXISTS has_citation BOOLEAN;
+CREATE INDEX IF NOT EXISTS idx_ai_queries_confidence_none
+  ON ai_queries(created_at DESC) WHERE confidence = 'none';
+
+-- Unanswered questions feed (confidence='none' = AI couldn't find answer in docs)
+CREATE OR REPLACE VIEW ai_unanswered_questions AS
+SELECT
+  q.id,
+  q.user_id,
+  q.query_text,
+  q.product_name,
+  q.created_at,
+  u.email,
+  u.first_name,
+  u.last_name
+FROM ai_queries q
+LEFT JOIN public.users u ON u.id = q.user_id
+WHERE q.confidence = 'none'
+ORDER BY q.created_at DESC;

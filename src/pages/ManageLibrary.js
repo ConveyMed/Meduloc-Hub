@@ -4,7 +4,7 @@ const ManageLibrary = () => {
   return (
     <ManageContentScreen
       type="library"
-      title="Manage Library"
+      title="Manage Sales Tools"
       backPath="/profile"
     />
   );

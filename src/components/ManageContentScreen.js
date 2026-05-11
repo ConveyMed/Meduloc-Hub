@@ -647,7 +647,7 @@ const ContentItemModal = ({ isOpen, onClose, onSave, item, title, type, categori
 };
 
 // Multi-Category Content Modal
-const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories, trainingCategories, type }) => {
+const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories, trainingCategories, formsCategories, type }) => {
   const modalRef = React.useRef(null);
   const scrollYRef = React.useRef(0);
   const { prepareVideoUpload } = useContent();
@@ -849,6 +849,23 @@ const MultiCategoryContentModal = ({ isOpen, onClose, onSave, libraryCategories,
             <div style={styles.categorySection}>
               <div style={styles.categorySectionTitle}>Training & Development</div>
               {trainingCategories.map(cat => (
+                <label key={cat.id} style={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(cat.id)}
+                    onChange={() => toggleCategory(cat.id)}
+                    style={styles.checkbox}
+                  />
+                  <span style={styles.checkboxLabel}>{cat.title}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {formsCategories && formsCategories.length > 0 && (
+            <div style={styles.categorySection}>
+              <div style={styles.categorySectionTitle}>Forms</div>
+              {formsCategories.map(cat => (
                 <label key={cat.id} style={styles.checkboxRow}>
                   <input
                     type="checkbox"
@@ -1170,6 +1187,7 @@ const ManageContentScreen = ({ type, title, backPath }) => {
         onSave={handleSaveMultiCategoryContent}
         libraryCategories={libraryCategories}
         trainingCategories={trainingCategories}
+        formsCategories={formsCategories}
         type={type}
       />
 

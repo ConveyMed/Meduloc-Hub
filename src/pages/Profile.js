@@ -282,7 +282,7 @@ const Profile = () => {
                 <button style={styles.menuItem} onClick={() => navigate('/manage-library')}>
                   <div style={styles.menuItemWithIcon}>
                     <LibraryIcon />
-                    <span style={styles.menuText}>Manage Sales Tools</span>
+                    <span style={styles.menuText}>Manage Library</span>
                   </div>
                   <ChevronRightIcon />
                 </button>

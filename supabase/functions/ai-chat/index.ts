@@ -112,7 +112,7 @@ serve(async (req) => {
 
   try {
     const { product, question, conversationHistory = [] } = await req.json();
-    console.log("Received - Product:", product, "Question:", question, "History length:", conversationHistory.length);
+    console.log("ai-chat request received, history length:", conversationHistory.length);
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -130,7 +130,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     // Fetch product document
-    console.log("Fetching product doc for:", product);
+    console.log("Fetching product doc");
     const { data: productDoc, error: dbError } = await supabase
       .from("product_docs")
       .select("*")
@@ -142,7 +142,7 @@ serve(async (req) => {
       throw new Error(`Product documentation not found for: ${product}`);
     }
 
-    console.log("Found product doc, content length:", productDoc.content?.length);
+    console.log("Product doc loaded");
 
     // Build conversation context if there's history
     let conversationContext = '';
@@ -207,7 +207,7 @@ serve(async (req) => {
 
     // Extract the text response
     const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    console.log("Raw response:", responseText);
+    console.log("Response received, length:", responseText.length);
 
     // Try to parse JSON from response
     let parsedResponse;

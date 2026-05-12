@@ -26,6 +26,7 @@
     "@testing-library/user-event": "^13.5.0",
     "apexcharts": "^5.11.0",
     "docx-preview": "^0.3.7",
+    "dompurify": "^3.4.2",
     "exceljs": "^4.4.0",
     "idb-keyval": "^6.2.2",
     "jspdf": "^4.2.1",

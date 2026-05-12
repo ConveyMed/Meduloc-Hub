@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
 import * as XLSX from 'xlsx';
+import DOMPurify from 'dompurify';
 import { renderAsync } from 'docx-preview';
 import { useDownloads } from '../context/DownloadsContext';
 import { openInAppBrowser } from '../utils/browser';
@@ -135,7 +136,12 @@ const SpreadsheetViewer = ({ fileUrl, fileName }) => {
       {/* Sheet Content */}
       <div style={styles.sheetContent}>
         <div
-          dangerouslySetInnerHTML={{ __html: sheets[activeSheet]?.html || '' }}
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(sheets[activeSheet]?.html || '', {
+              FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
+              FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'href'],
+            }),
+          }}
           style={styles.spreadsheetHtml}
         />
       </div>

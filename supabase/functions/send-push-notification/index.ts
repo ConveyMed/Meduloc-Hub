@@ -62,7 +62,7 @@ serve(async (req) => {
 
   try {
     const payload: PushNotificationRequest = await req.json();
-    console.log("Push notification request:", payload.notification_type, "Title:", payload.title);
+    console.log("Push notification request, type:", payload.notification_type);
 
     const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
     const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
@@ -74,8 +74,6 @@ serve(async (req) => {
     }
 
     // Debug: log key prefix to verify it's loaded
-    console.log("OneSignal App ID:", ONESIGNAL_APP_ID);
-    console.log("OneSignal Key prefix:", ONESIGNAL_REST_API_KEY?.substring(0, 15) + "...");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
       throw new Error("Supabase configuration missing");
@@ -143,7 +141,7 @@ serve(async (req) => {
     };
 
     // Send to OneSignal v1 API with Basic auth (same as working CardChase)
-    console.log("Sending to OneSignal v1 API:", JSON.stringify(notification));
+    console.log(`Sending OneSignal notification to ${targetPlayerIds.length} subscriptions`);
 
     const onesignalResponse = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
@@ -161,7 +159,7 @@ serve(async (req) => {
     }
 
     const onesignalData = await onesignalResponse.json();
-    console.log("OneSignal response:", onesignalData);
+    console.log("OneSignal notification sent, id:", onesignalData.id);
 
     return new Response(
       JSON.stringify({

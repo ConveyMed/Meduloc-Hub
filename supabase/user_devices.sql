@@ -24,11 +24,7 @@ CREATE POLICY "Users can manage own devices"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Authenticated users can read all devices (needed for sending notifications)
-CREATE POLICY "Authenticated can read devices for notifications"
-  ON user_devices FOR SELECT
-  TO authenticated
-  USING (true);
+-- Notification dispatch uses service_role server-side; no SELECT policy needed for authenticated users.
 
 -- Index for quick lookups by user
 CREATE INDEX IF NOT EXISTS idx_user_devices_user_id

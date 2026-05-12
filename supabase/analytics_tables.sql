@@ -29,9 +29,7 @@ CREATE POLICY "Users can update their own sessions"
   ON user_sessions FOR UPDATE
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Service role can read all sessions"
-  ON user_sessions FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- SCREEN VIEWS
@@ -55,9 +53,7 @@ CREATE POLICY "Users can insert their own screen views"
   ON screen_views FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Service role can read all screen views"
-  ON screen_views FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- ASSET EVENTS
@@ -86,9 +82,7 @@ CREATE POLICY "Users can insert their own asset events"
   ON asset_events FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Service role can read all asset events"
-  ON asset_events FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- AI QUERIES
@@ -111,9 +105,7 @@ CREATE POLICY "Users can insert their own AI queries"
   ON ai_queries FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Service role can read all AI queries"
-  ON ai_queries FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- PROFILE VIEWS
@@ -136,9 +128,7 @@ CREATE POLICY "Users can insert their own profile views"
   ON profile_views FOR INSERT
   WITH CHECK (auth.uid() = viewer_id);
 
-CREATE POLICY "Service role can read all profile views"
-  ON profile_views FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- DIRECTORY SEARCHES
@@ -161,9 +151,7 @@ CREATE POLICY "Users can insert their own directory searches"
   ON directory_searches FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Service role can read all directory searches"
-  ON directory_searches FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- NOTIFICATION CLICKS
@@ -186,9 +174,7 @@ CREATE POLICY "Users can insert their own notification clicks"
   ON notification_clicks FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Service role can read all notification clicks"
-  ON notification_clicks FOR SELECT
-  USING (true);
+-- service_role bypasses RLS for reads; no SELECT policy needed.
 
 -- ============================================
 -- OWNER PROFILES
@@ -212,17 +198,15 @@ CREATE INDEX idx_owner_profiles_app_id ON owner_profiles(app_id);
 ALTER TABLE owner_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Only service role can manage owner profiles
-CREATE POLICY "Service role full access to owner profiles"
-  ON owner_profiles
-  USING (true)
-  WITH CHECK (true);
+-- service_role bypasses RLS by default; RLS enabled to deny anon/authenticated access.
 
 -- ============================================
 -- HELPFUL VIEWS FOR ANALYTICS QUERIES
 -- ============================================
 
 -- Daily active users
-CREATE OR REPLACE VIEW daily_active_users AS
+CREATE OR REPLACE VIEW daily_active_users
+WITH (security_invoker=true) AS
 SELECT
   DATE(started_at) as date,
   COUNT(DISTINCT user_id) as unique_users,
@@ -232,7 +216,8 @@ GROUP BY DATE(started_at)
 ORDER BY date DESC;
 
 -- Screen popularity
-CREATE OR REPLACE VIEW screen_popularity AS
+CREATE OR REPLACE VIEW screen_popularity
+WITH (security_invoker=true) AS
 SELECT
   screen_name,
   COUNT(*) as view_count,
@@ -242,7 +227,8 @@ GROUP BY screen_name
 ORDER BY view_count DESC;
 
 -- Asset engagement
-CREATE OR REPLACE VIEW asset_engagement AS
+CREATE OR REPLACE VIEW asset_engagement
+WITH (security_invoker=true) AS
 SELECT
   asset_name,
   category,
@@ -255,7 +241,8 @@ GROUP BY asset_name, category, category_type, event_type
 ORDER BY event_count DESC;
 
 -- AI usage
-CREATE OR REPLACE VIEW ai_usage AS
+CREATE OR REPLACE VIEW ai_usage
+WITH (security_invoker=true) AS
 SELECT
   DATE(created_at) as date,
   COUNT(*) as query_count,
@@ -275,7 +262,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_queries_confidence_none
   ON ai_queries(created_at DESC) WHERE confidence = 'none';
 
 -- Unanswered questions feed (confidence='none' = AI couldn't find answer in docs)
-CREATE OR REPLACE VIEW ai_unanswered_questions AS
+CREATE OR REPLACE VIEW ai_unanswered_questions
+WITH (security_invoker=true) AS
 SELECT
   q.id,
   q.user_id,

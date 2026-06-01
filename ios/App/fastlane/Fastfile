@@ -36,6 +36,11 @@ platform :ios do
       sh("npm", "run", "build")
       sh("npx", "cap", "sync", "ios")
     end
+    archive_only
+  end
+
+  desc "Xcode archive + export signed IPA only (assumes web build + cap sync already done)"
+  lane :archive_only do
     sh("rm", "-rf", "build")
     build_app(
       workspace:       "App.xcworkspace",
@@ -60,15 +65,19 @@ platform :ios do
 
   desc "Submit current processed build for App Store review"
   lane :submit do |options|
-    version = options[:version] || sh("/usr/libexec/PlistBuddy", "-c", "Print CFBundleShortVersionString", "../App/Info.plist").strip rescue "1.0.1"
+    # Read literal version from xcodeproj MARKETING_VERSION
+    # (Info.plist uses $(MARKETING_VERSION) — doesn't resolve outside Xcode build).
+    version = options[:version] || sh("grep", "-m1", "MARKETING_VERSION", "../App.xcodeproj/project.pbxproj").strip.match(/MARKETING_VERSION = ([^;]+);/)[1]
     deliver(
       api_key:                       asc_key,
       app_version:                   version,
       submit_for_review:             true,
       automatic_release:             true,    # auto-release after Apple approves
       force:                         true,    # skip HTML preview
+      reject_if_possible:            true,    # reject any pending version first
       skip_screenshots:              true,    # metadata-only update
       skip_metadata:                 false,
+      skip_binary_upload:            true,
       precheck_include_in_app_purchases: false,
       submission_information: {
         add_id_info_uses_idfa:          false,
@@ -81,6 +90,13 @@ platform :ios do
   desc "Full release: build → upload → wait for processing → submit for review"
   lane :release do
     build
+    upload
+    submit
+  end
+
+  desc "Release assuming web build + cap sync already done manually"
+  lane :release_prebuilt do
+    archive_only
     upload
     submit
   end

@@ -206,13 +206,32 @@ function AppContent() {
     }
   }, [location.pathname, navigate, refreshProfile]);
 
-  // Handle deep links - when app opens from "Open in App" button, go to login
+  // Handle deep links — Universal/App Links route into the native app
   useEffect(() => {
-    const handleAppUrlOpen = (event) => {
-      // App was opened via deep link (medulochub://)
-      // Navigate to login so user can sign in
-      if (location.pathname === '/confirm-email') {
-        navigate('/', { replace: true });
+    const handleAppUrlOpen = async (event) => {
+      if (!event?.url) return;
+
+      try {
+        const url = new URL(event.url);
+        const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+        const type = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (type === 'recovery' && accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          navigate('/reset-password', { replace: true });
+          return;
+        }
+
+        if (url.pathname === '/confirm-email' || location.pathname === '/confirm-email') {
+          navigate('/', { replace: true });
+        }
+      } catch (err) {
+        console.error('Deep link handling failed:', err);
       }
     };
 

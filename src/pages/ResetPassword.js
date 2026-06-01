@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import '../onboarding/onboarding.css';
@@ -23,18 +23,6 @@ function ResetPassword() {
 
   const allRequirementsMet = requirements.every((req) => req.test(password));
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
-
-  useEffect(() => {
-    // Check if user has a session (from recovery token)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // No session means invalid/expired token
-        setError('Invalid or expired reset link. Please request a new one.');
-      }
-    };
-    checkSession();
-  }, []);
 
   const handleSubmit = async () => {
     if (!allRequirementsMet) {

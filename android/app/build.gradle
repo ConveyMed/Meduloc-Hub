@@ -1,14 +1,20 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace "com.medulochub.app"
     compileSdk rootProject.ext.compileSdkVersion
     signingConfigs {
         release {
-            storeFile file('../meduloc-hub-upload-key.jks')
-            storePassword 'meduloc2026'
-            keyAlias 'upload'
-            keyPassword 'meduloc2026'
+            storeFile file(keystoreProperties['storeFile'] ?: 'MISSING')
+            storePassword keystoreProperties['storePassword'] ?: ''
+            keyAlias keystoreProperties['keyAlias'] ?: ''
+            keyPassword keystoreProperties['keyPassword'] ?: ''
         }
     }
     defaultConfig {

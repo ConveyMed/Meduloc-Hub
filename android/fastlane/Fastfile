@@ -1,0 +1,55 @@
+# meduloc-hub — Android fastlane config
+# Run from android/ directory:
+#   fastlane status     — validate service account access
+#   fastlane build      — web + cap sync + bundleRelease
+#   fastlane upload     — upload AAB to Play Console (production track)
+#   fastlane release    — full pipeline: build + upload
+#
+# Credentials: Appfile points at ~/Apps/p8-keys/play-store-service-account.json
+
+default_platform(:android)
+
+AAB_PATH   = "app/build/outputs/bundle/release/app-release.aab"
+TRACK      = "production"        # internal, alpha, beta, production
+RELEASE_STATUS = "completed"     # completed, draft, inProgress, halted
+
+platform :android do
+  desc "Validate Play Console API access (prints current production version)"
+  lane :status do
+    version = google_play_track_release_names(track: TRACK)
+    UI.success("Play Console reachable. Current production release name(s): #{version.inspect}")
+  end
+
+  desc "Web build + Capacitor sync + Android AAB (signed release bundle)"
+  lane :build do
+    Dir.chdir("../..") do
+      sh("npm", "run", "build")
+      sh("npx", "cap", "sync", "android")
+    end
+    gradle(
+      task: "clean bundle",
+      build_type: "Release",
+      project_dir: "."
+    )
+  end
+
+  desc "Upload AAB to Play Console"
+  lane :upload do
+    upload_to_play_store(
+      aab:   AAB_PATH,
+      track: TRACK,
+      release_status: RELEASE_STATUS,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Full release: build + upload"
+  lane :release do
+    build
+    upload
+  end
+end

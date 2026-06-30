@@ -31,6 +31,14 @@ Show latest TestFlight build + processing status
 
 Web build + Capacitor sync + Xcode archive + export signed IPA
 
+### ios archive_only
+
+```sh
+[bundle exec] fastlane ios archive_only
+```
+
+Xcode archive + export signed IPA only (assumes web build + cap sync already done)
+
 ### ios upload
 
 ```sh
@@ -54,6 +62,14 @@ Submit current processed build for App Store review
 ```
 
 Full release: build → upload → wait for processing → submit for review
+
+### ios release_prebuilt
+
+```sh
+[bundle exec] fastlane ios release_prebuilt
+```
+
+Release assuming web build + cap sync already done manually
 
 ----
 

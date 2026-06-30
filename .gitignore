@@ -36,3 +36,6 @@ keys/
 FIELD_INTELLIGENCE.md
 FIELD_INTELLIGENCE_PHASES.md
 FIELD_INTELLIGENCE_UPDATES.md
+
+# Per-app deviation map (local-only, not committed)
+WHATS_DIFFERENT.md

@@ -1,10 +1,10 @@
 import { supabase } from '../config/supabase';
 
-const ONESIGNAL_APP_ID = process.env.REACT_APP_ONESIGNAL_APP_ID;
-const ONESIGNAL_REST_API_KEY = process.env.REACT_APP_ONESIGNAL_REST_API_KEY;
-
-console.log('[Push] ENV check - APP_ID:', ONESIGNAL_APP_ID ? 'SET' : 'MISSING');
-console.log('[Push] ENV check - REST_KEY:', ONESIGNAL_REST_API_KEY ? 'SET' : 'MISSING');
+// Push sends go through the send-push-notification edge function, which holds
+// the OneSignal REST key server-side (and runs with verify_jwt off, so a stale
+// or expired client session can't block a send). The client only resolves WHO
+// to notify (by user id) and the edge function targets them by external_id —
+// so push survives app updates / reinstalls without chasing subscription IDs.
 
 // Helper: Get all user IDs except sender
 const getAllUserIds = async (excludeUserId) => {
@@ -16,51 +16,33 @@ const getAllUserIds = async (excludeUserId) => {
   return data.map(u => u.id).filter(id => id !== excludeUserId);
 };
 
-// Helper: Get ALL subscription IDs for users (multi-device support)
-// Also checks user preferences if preferenceColumn is specified
+// Helper: Resolve WHICH users should receive a notification, honoring the
+// per-type preference. Returns USER IDs (not subscription IDs): delivery
+// targets users by external_id, so OneSignal routes to each user's CURRENT
+// device(s). That makes push survive app updates / reinstalls without chasing
+// subscription IDs that change underneath us.
 const getSubscriptionIds = async (userIds, preferenceColumn = null) => {
   if (!userIds.length) return [];
+  if (!preferenceColumn) return [...new Set(userIds)];
 
-  // If we need to filter by preference, get users who have that preference enabled
-  let eligibleUserIds = userIds;
+  // A user with no preference row is opted-in by default (defaults are created
+  // all-on at registration), so only drop users who EXPLICITLY set it to false.
+  const { data: prefs, error: prefError } = await supabase
+    .from('user_notification_preferences')
+    .select(`user_id, ${preferenceColumn}`)
+    .in('user_id', userIds);
 
-  if (preferenceColumn) {
-    const { data: prefs, error: prefError } = await supabase
-      .from('user_notification_preferences')
-      .select('user_id')
-      .in('user_id', userIds)
-      .eq(preferenceColumn, true);
-
-    if (prefError) {
-      console.error('[Push] Error fetching preferences:', prefError);
-      return [];
-    }
-
-    eligibleUserIds = prefs?.map(p => p.user_id) || [];
-    console.log('[Push] Users with', preferenceColumn, '=true:', eligibleUserIds);
-    if (!eligibleUserIds.length) {
-      console.log('[Push] No users with preference enabled:', preferenceColumn);
-      return [];
-    }
-  }
-
-  // Get ALL devices for eligible users (multi-device!)
-  const { data: devices, error } = await supabase
-    .from('user_devices')
-    .select('user_id, onesignal_subscription_id')
-    .in('user_id', eligibleUserIds);
-
-  if (error) {
-    console.error('[Push] Error fetching devices:', error);
+  if (prefError) {
+    console.error('[Push] Error fetching preferences:', prefError);
     return [];
   }
 
-  console.log('[Push] Devices found:', devices?.map(d => ({ user: d.user_id.slice(-8), sub: d.onesignal_subscription_id.slice(-8) })));
-
-  const subscriptionIds = devices?.map(d => d.onesignal_subscription_id) || [];
-  console.log('[Push] Found', subscriptionIds.length, 'devices for', eligibleUserIds.length, 'users');
-
-  return subscriptionIds;
+  const disabled = new Set(
+    (prefs || []).filter(p => p[preferenceColumn] === false).map(p => p.user_id)
+  );
+  const eligibleUserIds = [...new Set(userIds.filter(id => !disabled.has(id)))];
+  console.log('[Push]', eligibleUserIds.length, 'eligible users for', preferenceColumn || 'all');
+  return eligibleUserIds;
 };
 
 // Legacy alias for backward compatibility
@@ -144,87 +126,43 @@ const getPostCommentSubscriptionIds = async (postId, excludeUserId) => {
 
   console.log('[Push] Eligible users after filtering:', eligibleUserIds.length);
 
-  if (!eligibleUserIds.length) {
-    console.log('[Push] No eligible users for post comment notification');
-    return [];
-  }
-
-  // Step 5: Get ALL devices for eligible users
-  const { data: devices, error: devicesError } = await supabase
-    .from('user_devices')
-    .select('onesignal_subscription_id')
-    .in('user_id', eligibleUserIds);
-
-  if (devicesError) {
-    console.error('[Push] Error fetching devices:', devicesError);
-    return [];
-  }
-
-  const subscriptionIds = devices?.map(d => d.onesignal_subscription_id) || [];
-  console.log('[Push] Found', subscriptionIds.length, 'devices for', eligibleUserIds.length, 'users (post comments)');
-
-  return subscriptionIds;
+  // Return USER IDs — delivery targets them by external_id (update-proof).
+  return [...new Set(eligibleUserIds)];
 };
 
-// Helper: Send push via OneSignal REST API (v1) - matches working CardChase pattern
-const sendPush = async (playerIds, title, message, data = {}) => {
-  console.log('[Push] sendPush called with', playerIds.length, 'devices');
-  console.log('[Push] Target subscription IDs:', playerIds);
+// Helper: Send push via the send-push-notification edge function.
+// `recipientUserIds` is the resolved set of USER IDs to notify (preferences /
+// watching / muted already applied above). The edge function targets them by
+// external_id, so OneSignal delivers to each user's CURRENT device — push keeps
+// working across app updates, reinstalls, and new devices with no ID chasing.
+const sendPush = async (recipientUserIds, title, message, data = {}) => {
+  console.log('[Push] sendPush called for', recipientUserIds.length, 'users');
 
-  if (!playerIds.length) {
-    console.log('[Push] No devices to send to');
-    return { success: false, reason: 'no_devices' };
-  }
-
-  if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-    console.log('[Push] OneSignal not configured');
-    return { success: false, reason: 'not_configured' };
+  if (!recipientUserIds.length) {
+    console.log('[Push] No recipients to send to');
+    return { success: false, reason: 'no_recipients' };
   }
 
   try {
-    const response = await fetch('https://onesignal.com/api/v1/notifications', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+    const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
+      body: {
+        external_user_ids: recipientUserIds,
+        title,
+        message,
+        notification_type: data.type || 'new_post',
+        data,
       },
-      body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        include_subscription_ids: playerIds,
-        headings: { en: title },
-        contents: { en: message },
-        data: data,
-      }),
     });
 
-    const result = await response.json();
-    console.log('[Push] === ONESIGNAL RESPONSE ===');
-    console.log('[Push] Success:', response.ok);
-    console.log('[Push] Notification ID:', result.id);
-    console.log('[Push] Recipients:', result.recipients);
-
-    // Show which devices failed
-    const invalidIds = result.errors?.invalid_player_ids || [];
-    if (invalidIds.length > 0) {
-      console.log('[Push] FAILED devices (invalid/stale):', invalidIds);
+    if (error) {
+      console.error('[Push] Edge function error:', error);
+      return { success: false, error: error.message };
     }
 
-    // Show which devices should have succeeded
-    const succeededIds = playerIds.filter(id => !invalidIds.includes(id));
-    console.log('[Push] SUCCEEDED devices:', succeededIds);
+    console.log('[Push] === SEND-PUSH RESULT ===');
+    console.log('[Push] sent:', result?.sent, 'onesignal_id:', result?.onesignal_id);
 
-    // Clean up invalid/stale subscription IDs from user_devices table
-    if (invalidIds.length > 0) {
-      console.log('[Push] Cleaning up', invalidIds.length, 'stale devices from DB');
-      for (const invalidId of invalidIds) {
-        await supabase
-          .from('user_devices')
-          .delete()
-          .eq('onesignal_subscription_id', invalidId);
-      }
-    }
-
-    return { success: response.ok, result };
+    return { success: result?.success !== false, result };
   } catch (err) {
     console.error('[Push] Error:', err);
     return { success: false, error: err.message };

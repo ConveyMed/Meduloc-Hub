@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useActivityNotifications } from '../context/ActivityNotificationsContext';
 
 // Bell Icon
@@ -135,8 +135,6 @@ export const NotificationPanel = ({ onNavigate }) => {
     panelOpen,
     closePanel,
     getGroupedNotifications,
-    getUnreadNotifications,
-    isNotificationRead,
     markAllAsRead,
     navigateToNotification,
   } = useActivityNotifications();
@@ -144,7 +142,6 @@ export const NotificationPanel = ({ onNavigate }) => {
   if (!panelOpen) return null;
 
   const grouped = getGroupedNotifications();
-  const unread = getUnreadNotifications();
   const hasAny = grouped.totalNew > 0 || grouped.totalOlder > 0;
 
   const handleItemClick = (notification) => {

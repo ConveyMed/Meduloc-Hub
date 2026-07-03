@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { HiOutlineUser, HiOutlineClock, HiOutlineEye, HiOutlineDownload, HiOutlineFolder, HiOutlineDocument } from 'react-icons/hi'
+import { useEffect, useState } from 'react'
+import { HiOutlineUser, HiOutlineEye, HiOutlineFolder, HiOutlineDocument } from 'react-icons/hi'
 import TimeframeSelector from '../../components/TimeframeSelector'
 import DataTable from '../../components/charts/DataTable'
 import LoadingSpinner from '../../components/LoadingSpinner'

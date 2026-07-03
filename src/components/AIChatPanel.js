@@ -25,13 +25,6 @@ const SendIcon = () => (
   </svg>
 );
 
-const RefreshIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="23 4 23 10 17 10" />
-    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-  </svg>
-);
-
 const PlusIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="5" x2="12" y2="19" />
@@ -85,11 +78,9 @@ const AIChatPanel = () => {
     isLoading,
     loadingMessage,
     messages,
-    lastResponse,
     error,
     askQuestion,
     resetChat,
-    newConversation,
     history,
     isHistoryOpen,
     toggleHistory,
@@ -516,12 +507,6 @@ const styles = {
     borderRadius: '8px',
     padding: '10px 14px',
     margin: '0 0 12px 0',
-  },
-  disclaimerText: {
-    fontSize: '12px',
-    color: '#6b5c00',
-    lineHeight: '1.5',
-    margin: 0,
   },
   backdrop: {
     position: 'fixed',

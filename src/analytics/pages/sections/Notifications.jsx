@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { HiOutlineBell, HiOutlineCursorClick, HiOutlineEye, HiOutlineUsers, HiOutlineSpeakerphone } from 'react-icons/hi'
+import { HiOutlineBell, HiOutlineCursorClick, HiOutlineEye, HiOutlineSpeakerphone } from 'react-icons/hi'
 import TimeframeSelector from '../../components/TimeframeSelector'
 import StatCardGrid from '../../components/charts/StatCardGrid'
 import BarChart from '../../components/charts/BarChart'

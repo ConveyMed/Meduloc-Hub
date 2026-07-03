@@ -86,6 +86,7 @@ export const ContentProvider = ({ children }) => {
     if (!initialLoaded) {
       loadAllContent();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLoaded]);
 
   // Computed loading - only true if actually loading AND no data yet

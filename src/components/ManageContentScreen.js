@@ -985,7 +985,7 @@ const ManageContentScreen = ({ type, title, backPath }) => {
     addContentItem, addContentToCategories, updateContentItem, updateContentCategories, deleteContentItem,
     removeContentFromCategory,
     reorderCategories, reorderContentItems,
-    startBackgroundUpload, videoUploads,
+    startBackgroundUpload,
   } = useContent();
 
   const categories = type === 'library' ? libraryCategories : type === 'forms' ? formsCategories : trainingCategories;
@@ -1252,7 +1252,6 @@ const styles = {
   thumbnailPreview: { display: 'flex', alignItems: 'center', gap: '12px' },
   previewImage: { width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' },
   filePreview: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '10px', fontSize: '14px', color: '#1e293b' },
-  removeBtn: { padding: '6px 12px', backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' },
   toggleGroup: { marginBottom: '16px' },
   toggleRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9' },
   toggleLabel: { fontSize: '14px', color: '#1e293b' },

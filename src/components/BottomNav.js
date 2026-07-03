@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePosts } from '../context/PostsContext';
-import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationsContext';
 import { useAIChat } from '../context/AIChatContext';
 import { useChat } from '../context/ChatContext';
@@ -101,7 +100,6 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { openCreateModal } = usePosts();
-  const { userProfile } = useAuth();
   const { totalUnread } = useNotifications();
   const { openChat } = useAIChat();
   const { totalUnread: chatUnread } = useChat();

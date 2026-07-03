@@ -58,12 +58,6 @@ const CheckIcon = () => (
   </svg>
 );
 
-const VideoIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="23 7 16 12 23 17 23 7" />
-    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-  </svg>
-);
 
 const PlayIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -258,6 +252,7 @@ const ContentModal = ({ item, onClose, isDownloaded, onDownload, downloadProgres
     const interval = setInterval(checkStatus, 15000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.bunny_video_id, videoStatus]);
 
   // Prevent touch scroll on overlay (allow only on modal)

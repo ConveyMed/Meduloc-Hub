@@ -147,7 +147,7 @@ export function downloadSectionCSV(section, baseFilename = 'meduloc-hub') {
 
 // Generate comprehensive CSV with all sections
 export function generateFullCSV(sections, options = {}) {
-  const { dateRange, companyName = 'Meduloc Hub', allUsers, userReportRows, categories = [], screenNames = [] } = options
+  const { dateRange, userReportRows, categories = [], screenNames = [] } = options
   const USER_REPORT_COLUMNS = buildUserReportColumns(screenNames, categories)
   const USER_REPORT_GROUPS = buildUserReportGroups(screenNames, categories)
   let csv = ''
@@ -228,7 +228,7 @@ export function downloadFullCSV(sections, filename, options = {}) {
 
 // Download multiple CSVs as a ZIP (requires JSZip)
 export async function downloadCSVZip(sections, filename, options = {}) {
-  const { allUsers, userReportRows, categories = [], screenNames = [] } = options
+  const { userReportRows, categories = [], screenNames = [] } = options
   const USER_REPORT_COLUMNS = buildUserReportColumns(screenNames, categories)
   const USER_REPORT_GROUPS = buildUserReportGroups(screenNames, categories)
 
@@ -386,7 +386,7 @@ function addSectionSheet(workbook, section) {
 
 export async function downloadExcel(sections, filename, options = {}) {
   const ExcelJS = (await import('exceljs')).default
-  const { companyName = 'Meduloc Hub', dateRange, allUsers, userReportRows, categories = [], screenNames = [] } = options
+  const { companyName = 'Meduloc Hub', dateRange, userReportRows, categories = [], screenNames = [] } = options
   const USER_REPORT_COLUMNS = buildUserReportColumns(screenNames, categories)
   const USER_REPORT_GROUPS = buildUserReportGroups(screenNames, categories)
 
@@ -659,7 +659,6 @@ function addExecutiveSummary(pdf, sections, yStart) {
   // Calculate key metrics from sections
   const userActivity = sections.find(s => s.id === 'userActivity')
   const feedActivity = sections.find(s => s.id === 'feedActivity')
-  const notifications = sections.find(s => s.id === 'notifications')
 
   // Metric boxes
   const boxWidth = (pageWidth - 60) / 4
@@ -801,7 +800,6 @@ export function generateUserReportPDF(userReportRows, options = {}) {
   const USER_REPORT_GROUPS = buildUserReportGroups(screenNames, categories)
   const pdf = new jsPDF({ orientation: 'landscape' })
   const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
 
   // Cover header bar
   pdf.setFillColor(...COLORS.primary)

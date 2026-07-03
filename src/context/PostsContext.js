@@ -209,6 +209,7 @@ export const PostsProvider = ({ children }) => {
     if (!initialLoaded) {
       loadPosts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLoaded]);
 
   // Real-time subscription for live post updates
@@ -250,6 +251,7 @@ export const PostsProvider = ({ children }) => {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Listen for refresh requests from notification deep links
@@ -257,6 +259,7 @@ export const PostsProvider = ({ children }) => {
     const handleRefresh = () => loadPosts(true);
     window.addEventListener('refreshPosts', handleRefresh);
     return () => window.removeEventListener('refreshPosts', handleRefresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Computed loading - only true if actually loading AND no data yet

@@ -103,7 +103,7 @@ export const ChatProvider = ({ children }) => {
       if (allMembersError) throw allMembersError;
 
       // Get unread counts
-      const { data: unreadData, error: unreadError } = await supabase
+      const { data: unreadData } = await supabase
         .from('messages')
         .select('chat_id, created_at')
         .in('chat_id', chatIds)
@@ -321,6 +321,7 @@ export const ChatProvider = ({ children }) => {
       console.error('Error sending message:', error);
       return null;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, chats, userProfile]);
 
   // Create a new chat (1:1 or group)
@@ -470,6 +471,7 @@ export const ChatProvider = ({ children }) => {
     } catch (error) {
       console.error('Error setting typing:', error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Clear typing indicator
@@ -592,7 +594,7 @@ export const ChatProvider = ({ children }) => {
     if (!user?.id) return;
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
         .update({
           content: newContent,

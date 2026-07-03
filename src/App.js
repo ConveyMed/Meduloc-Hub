@@ -30,8 +30,6 @@ import EditProfile from './pages/EditProfile';
 import ManageUsers from './pages/ManageUsers';
 import Directory from './pages/Directory';
 import DirectoryPermissions from './pages/DirectoryPermissions';
-import Library from './pages/Library';
-import Training from './pages/Training';
 import ManageLibrary from './pages/ManageLibrary';
 import ManageTraining from './pages/ManageTraining';
 import Forms from './pages/Forms';

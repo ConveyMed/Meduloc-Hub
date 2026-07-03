@@ -24,7 +24,7 @@ import useUserReport from '../hooks/useUserReport'
 export default function Dashboard() {
   const [showExport, setShowExport] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const { supabase, dateRange } = useAppContext()
+  const { dateRange } = useAppContext()
 
   const userReport = useUserReport()
   const userActivity = useUserActivity()
@@ -53,6 +53,7 @@ export default function Dashboard() {
     directoryUsage.fetchData()
     notifications.fetchData()
     growthRetention.fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     userActivity.fetchData, screenEngagement.fetchData, feedActivity.fetchData,
     libraryAssets.fetchData, trainingAssets.fetchData, downloads.fetchData,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
@@ -174,7 +174,7 @@ const ChatConversation = () => {
       const fileName = `${chatId}/${Date.now()}.${fileExt}`;
       const isImage = file.type.startsWith('image/');
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('chat-files')
         .upload(fileName, file);
 
@@ -868,7 +868,6 @@ const ReportModal = ({ onClose, onSubmit }) => {
 
 // Add Members Modal Component
 const AddMembersModal = ({ chat, onClose, onAdd }) => {
-  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState('');
@@ -876,6 +875,7 @@ const AddMembersModal = ({ chat, onClose, onAdd }) => {
 
   useEffect(() => {
     loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadUsers = async () => {

@@ -147,6 +147,7 @@ export const AnalyticsProvider = ({ children }) => {
     return () => {
       CapacitorApp.removeAllListeners();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isProfileComplete, startSession, endSession]);
 
   // Handle web tab close / navigate away (non-native only)

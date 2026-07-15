@@ -21,7 +21,7 @@ function ForgotPassword() {
 
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: 'https://medulochub.netlify.app/reset-password',
       });
 
       if (resetError) {

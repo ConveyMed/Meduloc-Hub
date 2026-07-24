@@ -601,8 +601,8 @@ function AppContent() {
                 ? <Navigate to="/profile-complete" replace />
                 : <ManageAnalytics />
           } />
-          <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<AppShell showNav={showBottomNav}><TermsAndConditions /></AppShell>} />
+          <Route path="/privacy" element={<AppShell showNav={showBottomNav}><PrivacyPolicy /></AppShell>} />
           <Route path="/delete-account" element={
             !isAuthenticated
               ? <Navigate to="/" replace />

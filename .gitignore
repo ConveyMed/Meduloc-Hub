@@ -39,3 +39,8 @@ FIELD_INTELLIGENCE_UPDATES.md
 
 # Per-app deviation map (local-only, not committed)
 WHATS_DIFFERENT.md
+*.cer
+*.mobileprovision
+*.p8
+*.jks
+AuthKey_*

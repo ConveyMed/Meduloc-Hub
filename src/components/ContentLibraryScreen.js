@@ -649,7 +649,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px 16px 8px 16px',
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     margin: '0 auto',
   },
   headerTitle: {
@@ -659,7 +659,7 @@ const styles = {
     margin: 0,
   },
   headerBorder: {
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     margin: '0 auto 16px auto',
     height: '2px',
     backgroundColor: 'rgba(30, 64, 175, 0.15)',
@@ -673,7 +673,7 @@ const styles = {
   },
   content: {
     width: '100%',
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     padding: '16px',
   },
   loadingContainer: {
@@ -850,7 +850,7 @@ const styles = {
     backgroundColor: '#ffffff',
     borderRadius: '20px',
     padding: '24px',
-    maxWidth: '400px',
+    maxWidth: 'var(--modal-max, 400px)',
     width: '100%',
     maxHeight: '100%',
     overflowY: 'auto',
@@ -879,16 +879,22 @@ const styles = {
   modalThumbnailContainer: {
     position: 'relative',
     width: '100%',
-    aspectRatio: '1',
+    height: 'var(--modal-thumb-max, 60vh)',
     borderRadius: '16px',
     overflow: 'hidden',
     backgroundColor: '#e2e8f0',
     marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalThumbnail: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
+    maxWidth: '100%',
+    maxHeight: '100%',
+    width: 'auto',
+    height: 'auto',
+    objectFit: 'contain',
+    display: 'block',
   },
   modalThumbnailPlaceholder: {
     width: '100%',

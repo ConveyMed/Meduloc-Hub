@@ -144,7 +144,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px 16px 8px 16px',
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     margin: '0 auto',
   },
   backButton: {
@@ -161,7 +161,7 @@ const styles = {
     margin: 0,
   },
   headerBorder: {
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     margin: '0 auto',
     height: '2px',
     backgroundColor: 'rgba(0, 75, 135, 0.15)',
@@ -175,7 +175,7 @@ const styles = {
   },
   content: {
     width: '100%',
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     padding: '24px 16px',
   },
   description: {

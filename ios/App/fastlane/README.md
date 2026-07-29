@@ -23,6 +23,14 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 Show latest TestFlight build + processing status
 
+### ios review_status
+
+```sh
+[bundle exec] fastlane ios review_status
+```
+
+Show App Store review status for the latest version
+
 ### ios build
 
 ```sh

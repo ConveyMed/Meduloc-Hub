@@ -30,6 +30,16 @@ platform :ios do
     UI.success("Latest TestFlight build number: #{latest}")
   end
 
+  desc "Show App Store review status for the latest version"
+  lane :review_status do
+    asc_key
+    app = Spaceship::ConnectAPI::App.find("com.medulochub.app")
+    versions = app.get_app_store_versions(includes: "appStoreVersionSubmission")
+    versions.first(3).each do |v|
+      UI.message("Version #{v.version_string}: #{v.app_store_state}")
+    end
+  end
+
   desc "Web build + Capacitor sync + Xcode archive + export signed IPA"
   lane :build do
     Dir.chdir("../..") do
@@ -49,7 +59,14 @@ platform :ios do
       export_method:   "app-store",
       output_directory: "build",
       output_name:     "Meduloc Hub.ipa",
-      clean:           true
+      clean:           true,
+      export_options: {
+        signingStyle: "manual",
+        provisioningProfiles: {
+          "com.medulochub.app" => "com.medulochub.app AppStore",
+          "com.medulochub.app.OneSignalNotificationServiceExtension" => "com.medulochub.app.OneSignalNotificationServiceExtension AppStore"
+        }
+      }
     )
   end
 

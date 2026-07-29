@@ -520,7 +520,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px 16px 8px 16px',
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     margin: '0 auto',
   },
   headerTitle: {
@@ -530,7 +530,7 @@ const styles = {
     margin: 0,
   },
   headerBorder: {
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     margin: '0 auto 16px auto',
     height: '2px',
     backgroundColor: 'rgba(30, 64, 175, 0.15)',
@@ -544,7 +544,7 @@ const styles = {
   },
   content: {
     width: '100%',
-    maxWidth: '600px',
+    maxWidth: 'var(--content-max)',
     padding: '16px',
   },
   profileCard: {

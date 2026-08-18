@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
+import { BRAND } from '../config/brand';
 import './onboarding.css';
 
 function SignUp() {
@@ -42,6 +43,13 @@ function SignUp() {
         setIsCreating(false);
         return;
       }
+
+      // Branded welcome email. Supabase does not send one - new users are
+      // auto-confirmed, so no built-in signup email fires. Fire and forget:
+      // a failed email must never break account creation.
+      supabase.functions.invoke('send-welcome-email', {
+        body: { email: email.trim().toLowerCase(), ...BRAND }
+      }).catch((e) => console.error('Welcome email failed:', e));
 
       // Check if email confirmation is required
       if (data.user && !data.session) {

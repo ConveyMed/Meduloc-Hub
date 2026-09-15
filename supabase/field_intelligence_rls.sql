@@ -75,7 +75,8 @@ CREATE POLICY "surgeons_admin_delete" ON surgeons FOR DELETE
 
 -- REGIONS: all authenticated users can view, admin can modify
 DROP POLICY IF EXISTS "regions_select" ON regions;
-CREATE POLICY "regions_select" ON regions FOR SELECT USING (true);
+-- TO authenticated is required; without it this policy also grants anon.
+CREATE POLICY "regions_select" ON regions FOR SELECT TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "regions_admin_all" ON regions;
 CREATE POLICY "regions_admin_all" ON regions FOR ALL
@@ -146,7 +147,8 @@ CREATE POLICY "profiles_upsert" ON physician_profiles FOR ALL
 
 -- CUSTOM_FIELDS: everyone reads, admin modifies
 DROP POLICY IF EXISTS "custom_fields_select" ON custom_fields;
-CREATE POLICY "custom_fields_select" ON custom_fields FOR SELECT USING (true);
+-- TO authenticated is required; without it this policy also grants anon.
+CREATE POLICY "custom_fields_select" ON custom_fields FOR SELECT TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "custom_fields_admin" ON custom_fields;
 CREATE POLICY "custom_fields_admin" ON custom_fields FOR ALL

@@ -35,8 +35,9 @@ DROP POLICY IF EXISTS "Users can update own profile" ON users;
 DROP POLICY IF EXISTS "Allow insert for auth trigger" ON users;
 
 -- Policies
+-- TO authenticated is required; without it this policy also grants anon.
 CREATE POLICY "Users can view all users" ON users
-  FOR SELECT USING (true);
+  FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Users can update own profile" ON users
   FOR UPDATE USING (auth.uid() = id);

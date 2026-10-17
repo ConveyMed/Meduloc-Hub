@@ -1,0 +1,1 @@
+Responsive layout improvements for tablets and larger screens, including full-size Sales Tools previews. The activity area now hides when there is nothing new. Performance and stability fixes.

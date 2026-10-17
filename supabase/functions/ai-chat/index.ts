@@ -111,9 +111,6 @@ serve(async (req) => {
   }
 
   try {
-    const { product, question, conversationHistory = [] } = await req.json();
-    console.log("ai-chat request received, history length:", conversationHistory.length);
-
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -128,6 +125,34 @@ serve(async (req) => {
 
     // Create Supabase client
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // Caller must be a signed-in user (the anon key alone is not enough).
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: authData, error: authError } = token
+      ? await supabase.auth.getUser(token)
+      : { data: { user: null }, error: new Error("no token") };
+    if (authError || !authData?.user) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    const product = String(body.product || "");
+    const question = String(body.question || "").slice(0, 2000);
+    // Last 20 turns is plenty of context and keeps the prompt bounded.
+    const conversationHistory = (Array.isArray(body.conversationHistory) ? body.conversationHistory : [])
+      .slice(-20)
+      .map((m: { role?: string; content?: unknown }) => ({ role: m?.role, content: String(m?.content ?? "").slice(0, 4000) }));
+    console.log("ai-chat request received, history length:", conversationHistory.length);
+
+    if (!product || !question) {
+      return new Response(JSON.stringify({ success: false, error: "product and question are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch product document
     console.log("Fetching product doc");

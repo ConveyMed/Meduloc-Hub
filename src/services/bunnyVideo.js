@@ -1,14 +1,22 @@
 import * as tus from 'tus-js-client';
+import { supabase } from '../config/supabase';
 
 const isCapacitor = window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
 const FUNCTIONS_BASE = isCapacitor
   ? 'https://medulochub.netlify.app/.netlify/functions/bunny-video'
   : '/.netlify/functions/bunny-video';
 
+// The function checks the Supabase session, so every call carries it.
+async function authHeaders(extra = {}) {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+}
+
 export async function createBunnyVideo(title) {
   const res = await fetch(`${FUNCTIONS_BASE}?action=create`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ title }),
   });
 
@@ -51,7 +59,9 @@ export function uploadBunnyVideo(file, tusConfig, onProgress, onComplete, onErro
 }
 
 export async function getBunnyVideoStatus(videoId) {
-  const res = await fetch(`${FUNCTIONS_BASE}?action=status&videoId=${videoId}`);
+  const res = await fetch(`${FUNCTIONS_BASE}?action=status&videoId=${videoId}`, {
+    headers: await authHeaders(),
+  });
 
   if (!res.ok) {
     throw new Error('Failed to get video status');
@@ -63,6 +73,7 @@ export async function getBunnyVideoStatus(videoId) {
 export async function deleteBunnyVideo(videoId) {
   const res = await fetch(`${FUNCTIONS_BASE}?action=delete&videoId=${videoId}`, {
     method: 'DELETE',
+    headers: await authHeaders(),
   });
 
   if (!res.ok) {
@@ -73,7 +84,9 @@ export async function deleteBunnyVideo(videoId) {
 }
 
 export async function getSecureEmbedUrl(videoId) {
-  const res = await fetch(`${FUNCTIONS_BASE}?action=embed-token&videoId=${videoId}`);
+  const res = await fetch(`${FUNCTIONS_BASE}?action=embed-token&videoId=${videoId}`, {
+    headers: await authHeaders(),
+  });
 
   if (!res.ok) {
     throw new Error('Failed to get embed URL');

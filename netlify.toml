@@ -2,5 +2,8 @@
   command = "CI=false pnpm run build"
   publish = "build"
 
+[build.environment]
+  NODE_VERSION = "22"
+
 [functions]
   directory = "netlify/functions"

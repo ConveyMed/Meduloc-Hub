@@ -10,13 +10,68 @@ const headers = {
   'AccessKey': BUNNY_API_KEY,
 };
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-};
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL
+  || 'https://nhnpqsbmpypdxdvdqlfq.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY
+  // public anon key, already shipped in the web bundle; fallback so auth checks never 401 on a missing env var
+  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5obnBxc2JtcHlwZHhkdmRxbGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NDgzMDgsImV4cCI6MjA4NzEyNDMwOH0.zjEVz-5vQy6kVJfPB81xu5VxxSWnykk5BhX2CkbfY1U';
+
+// Web app plus the Capacitor WebViews (iOS capacitor://localhost, Android https://localhost).
+const ALLOWED_ORIGINS = [
+  'https://medulochub.netlify.app',
+  'capacitor://localhost',
+  'ionic://localhost',
+  'https://localhost',
+  'http://localhost',
+];
+const NATIVE_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'https://localhost', 'http://localhost'];
+const isLocalDev = (origin) => /^http:\/\/localhost:\d+$/.test(origin);
+
+// Store builds up to 1.0.6 call this function without a token. Until those are
+// gone, a native-app origin may still call without one. Set BUNNY_REQUIRE_AUTH=true
+// in Netlify once 1.0.7 is the only build in use.
+const REQUIRE_AUTH = process.env.BUNNY_REQUIRE_AUTH === 'true';
+
+const ADMIN_ACTIONS = new Set(['create', 'delete']);
+
+function corsFor(origin) {
+  const allowed = ALLOWED_ORIGINS.includes(origin) || isLocalDev(origin);
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Vary': 'Origin',
+  };
+}
+
+// Returns { id, isAdmin } for a valid Supabase session token, else null.
+async function getCaller(event) {
+  const auth = event.headers?.authorization || event.headers?.Authorization || '';
+  const token = auth.replace(/^Bearer\s+/i, '');
+  if (!token || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!userRes.ok) return null;
+  const user = await userRes.json();
+  if (!user?.id) return null;
+
+  const profileRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/users?id=eq.${encodeURIComponent(user.id)}&select=is_admin,is_owner`,
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } }
+  );
+  const rows = profileRes.ok ? await profileRes.json() : [];
+  const profile = rows[0] || {};
+  return { id: user.id, isAdmin: profile.is_admin === true || profile.is_owner === true };
+}
+
+let corsHeaders = corsFor('');
 
 exports.handler = async (event) => {
+  const origin = event.headers?.origin || event.headers?.Origin || '';
+  corsHeaders = corsFor(origin);
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders, body: '' };
   }
@@ -24,6 +79,17 @@ exports.handler = async (event) => {
   const action = event.queryStringParameters?.action;
 
   try {
+    const hasToken = /^Bearer\s+\S+/i.test(event.headers?.authorization || event.headers?.Authorization || '');
+    const legacyNative = !REQUIRE_AUTH && !hasToken && NATIVE_ORIGINS.includes(origin);
+
+    if (legacyNative) {
+      console.warn(`bunny-video: legacy no-token call from ${origin}, action=${action}`);
+    } else {
+      const caller = await getCaller(event);
+      if (!caller) return respond(401, { error: 'Unauthorized' });
+      if (ADMIN_ACTIONS.has(action) && !caller.isAdmin) return respond(403, { error: 'Forbidden' });
+    }
+
     switch (action) {
       case 'create':
         return await createVideo(event);

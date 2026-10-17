@@ -1,1 +1,2 @@
-Fixed an issue where password reset emails could fail to send.
+Password reset and welcome emails now work from the app.
+Security and stability updates.

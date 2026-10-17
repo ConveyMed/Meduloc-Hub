@@ -1,8 +1,8 @@
 import { supabase } from '../config/supabase';
 
 // Push sends go through the send-push-notification edge function, which holds
-// the OneSignal REST key server-side (and runs with verify_jwt off, so a stale
-// or expired client session can't block a send). The client only resolves WHO
+// the OneSignal REST key server-side and only accepts signed-in callers (it
+// checks the sender may notify those recipients). The client only resolves WHO
 // to notify (by user id) and the edge function targets them by external_id —
 // so push survives app updates / reinstalls without chasing subscription IDs.
 

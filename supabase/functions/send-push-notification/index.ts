@@ -55,6 +55,22 @@ const preferenceMap: Record<string, string> = {
   'event_reminder': 'push_event_reminders',
 };
 
+// Types only admins/owners may send (they fan out to every user, and only
+// admins can create updates/events under RLS).
+const ADMIN_ONLY_TYPES = new Set(['new_update', 'new_event']);
+// Types that must stay inside a chat the caller belongs to.
+const CHAT_TYPES = new Set(['direct_message', 'group_message', 'chat_member_added', 'chat_member_removed']);
+// Types tied to a post that must exist.
+const POST_TYPES = new Set(['new_post', 'post_liked', 'post_commented', 'comment_replied']);
+// Types whose recipients must all be admins/owners.
+const ADMIN_TARGET_TYPES = new Set(['new_user_joined', 'conversation_reported', 'event_rsvp']);
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -62,22 +78,111 @@ serve(async (req) => {
   }
 
   try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+      throw new Error("Supabase configuration missing");
+    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // ---- Caller must be a signed-in user ----
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: authData, error: authError } = token
+      ? await supabase.auth.getUser(token)
+      : { data: { user: null }, error: new Error("no token") };
+    const caller = authData?.user;
+    if (authError || !caller) {
+      return json({ success: false, error: "Unauthorized" }, 401);
+    }
+
+    const { data: callerProfile } = await supabase
+      .from('users')
+      .select('is_admin, is_owner')
+      .eq('id', caller.id)
+      .maybeSingle();
+    const callerIsAdmin = callerProfile?.is_admin === true || callerProfile?.is_owner === true;
+
     const payload: PushNotificationRequest = await req.json();
-    console.log("Push notification request, type:", payload.notification_type);
+    const pushType = String(payload.data?.type || payload.notification_type || '');
+    console.log("Push notification request, type:", pushType, "admin:", callerIsAdmin);
+
+    // Keep content to push-sized text.
+    payload.title = String(payload.title || '').slice(0, 120);
+    payload.message = String(payload.message || '').slice(0, 300);
+
+    // ---- Non-admins may only send the in-app notifications the app itself makes ----
+    if (!callerIsAdmin) {
+      const deny = (reason: string) => {
+        console.warn("Push denied:", reason, "caller:", caller.id);
+        return json({ success: false, error: "Forbidden" }, 403);
+      };
+
+      if (ADMIN_ONLY_TYPES.has(pushType)) return deny("admin-only type");
+      if (payload.player_ids?.length) return deny("raw subscription ids");
+
+      const recipients = [...new Set([
+        ...(payload.external_user_ids || []),
+        ...(payload.user_ids || []),
+      ])].filter(id => id && id !== caller.id);
+
+      if (CHAT_TYPES.has(pushType)) {
+        const chatId = payload.data?.chat_id;
+        if (!chatId) return deny("missing chat_id");
+        const { data: members } = await supabase
+          .from('chat_members')
+          .select('user_id')
+          .eq('chat_id', chatId);
+        const memberIds = new Set((members || []).map(m => m.user_id));
+        if (!memberIds.has(caller.id)) return deny("caller not in chat");
+        // A removed member has already left the chat, so only check the others.
+        if (pushType !== 'chat_member_removed' && recipients.some(id => !memberIds.has(id))) {
+          return deny("recipient not in chat");
+        }
+        if (pushType === 'chat_member_removed' && recipients.length > 1) {
+          return deny("too many recipients");
+        }
+      } else if (POST_TYPES.has(pushType)) {
+        const postId = payload.data?.post_id;
+        if (!postId) return deny("missing post_id");
+        const { data: post } = await supabase
+          .from('posts')
+          .select('id, user_id')
+          .eq('id', postId)
+          .maybeSingle();
+        if (!post) return deny("post not found");
+        if (pushType === 'new_post' && post.user_id !== caller.id) return deny("not the post author");
+        if (pushType === 'post_liked' && (recipients.length > 1 || (recipients[0] && recipients[0] !== post.user_id))) {
+          return deny("like recipient is not the post author");
+        }
+        if (pushType === 'comment_replied' && recipients.length > 1) return deny("too many recipients");
+      } else if (ADMIN_TARGET_TYPES.has(pushType)) {
+        if (recipients.length) {
+          const { data: admins } = await supabase
+            .from('users')
+            .select('id')
+            .in('id', recipients)
+            .or('is_admin.eq.true,is_owner.eq.true');
+          const adminIds = new Set((admins || []).map(a => a.id));
+          if (recipients.some(id => !adminIds.has(id))) return deny("recipient is not an admin");
+        }
+      } else {
+        return deny("unknown type");
+      }
+
+      // Recipients must be real app users.
+      if (recipients.length) {
+        const { data: known } = await supabase.from('users').select('id').in('id', recipients);
+        const knownIds = new Set((known || []).map(u => u.id));
+        if (recipients.some(id => !knownIds.has(id))) return deny("unknown recipient");
+      }
+    }
 
     const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
     const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
       throw new Error("OneSignal configuration missing");
     }
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-      throw new Error("Supabase configuration missing");
-    }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     // ---- Resolve the targeting fields for the OneSignal notification ----
     // Preferred path: target by external_id (= app user id). The app calls

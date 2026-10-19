@@ -97,10 +97,13 @@ serve(async (req) => {
 
     const { data: callerProfile } = await supabase
       .from('users')
-      .select('is_admin, is_owner')
+      .select('is_admin, is_owner, is_developer')
       .eq('id', caller.id)
       .maybeSingle();
     const callerIsAdmin = callerProfile?.is_admin === true || callerProfile?.is_owner === true;
+    // The app developer's testing must never reach client phones. Their pushes
+    // still go to their own devices so push can be tested end to end.
+    const callerIsDeveloper = callerProfile?.is_developer === true;
 
     const payload: PushNotificationRequest = await req.json();
     const pushType = String(payload.data?.type || payload.notification_type || '');
@@ -224,6 +227,13 @@ serve(async (req) => {
     } else if (payload.player_ids && payload.player_ids.length > 0) {
       // Legacy fallback: raw subscription IDs.
       subscriptionIds = [...new Set(payload.player_ids)];
+    }
+
+    if (callerIsDeveloper) {
+      const before = externalIds.length + subscriptionIds.length;
+      externalIds = externalIds.filter(id => id === caller.id);
+      subscriptionIds = [];
+      console.log(`Developer caller: ${before} recipient(s) reduced to ${externalIds.length} (self only)`);
     }
 
     if (externalIds.length === 0 && subscriptionIds.length === 0) {

@@ -17,8 +17,11 @@ serve(async (req) => {
     // checked the token's signature; here we only read its role.
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     let role = "";
+    let sub = "";
     try {
-      role = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).role || "";
+      const claims = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      role = claims.role || "";
+      sub = claims.sub || "";
     } catch (_) {
       role = "";
     }
@@ -80,7 +83,18 @@ serve(async (req) => {
     );
     const adminIds: string[] = adminsRes.ok ? (await adminsRes.json()).map((a: { id: string }) => a.id) : [];
 
-    if (onesignalAppId && onesignalKey && adminIds.length) {
+    // A request from the app developer (signed in, or using their email) is
+    // stored but never pushed to the client's admins.
+    const devRes = await fetch(
+      `${supabaseUrl}/rest/v1/users?select=id,email&is_developer=eq.true`,
+      { headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` } }
+    );
+    const developers: { id: string; email: string | null }[] = devRes.ok ? await devRes.json() : [];
+    const fromDeveloper = developers.some(d =>
+      d.id === sub || (d.email || "").toLowerCase() === email.toLowerCase()
+    );
+
+    if (onesignalAppId && onesignalKey && adminIds.length && !fromDeveloper) {
       await fetch("https://api.onesignal.com/notifications", {
         method: "POST",
         headers: {

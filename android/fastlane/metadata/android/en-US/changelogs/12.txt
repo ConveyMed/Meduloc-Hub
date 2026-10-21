@@ -1,0 +1,5 @@
+Your app now opens with its own logo.
+The notification bell only lights up for new items, and clears when you read them.
+The access code is asked once per device.
+Delete Account now works from Settings.
+Faster chat, sign-in fixes and security updates.

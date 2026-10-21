@@ -2,13 +2,35 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import { clear as clearIDB } from 'idb-keyval';
+import { ACCOUNT_REMOVED_KEY } from '../context/AuthContext';
+import { ORG_CODE_STORAGE_KEYS } from '../services/orgCode';
 import './onboarding.css';
+
+// localStorage.clear() without losing the once-per-device org code flag
+const clearLocalStorageKeepOrgCode = () => {
+  const kept = ORG_CODE_STORAGE_KEYS
+    .map(key => [key, localStorage.getItem(key)])
+    .filter(([, value]) => value !== null);
+  localStorage.clear();
+  kept.forEach(([key, value]) => localStorage.setItem(key, value));
+};
+
+const takeAccountRemovedNotice = () => {
+  try {
+    const shown = sessionStorage.getItem(ACCOUNT_REMOVED_KEY) === 'true';
+    if (shown) sessionStorage.removeItem(ACCOUNT_REMOVED_KEY);
+    return shown;
+  } catch (e) {
+    return false;
+  }
+};
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [accountRemoved] = useState(takeAccountRemovedNotice);
   const navigate = useNavigate();
 
   const handleLogin = async () => {
@@ -60,8 +82,8 @@ function Login() {
       await supabase.auth.signOut();
       // Clear IndexedDB (cached auth/profile)
       await clearIDB();
-      // Clear localStorage
-      localStorage.clear();
+      // Clear localStorage (the org code flag stays)
+      clearLocalStorageKeepOrgCode();
       // Clear sessionStorage
       sessionStorage.clear();
       // Clear service worker caches
@@ -74,7 +96,7 @@ function Login() {
     } catch (err) {
       console.error('Error clearing cache:', err);
       // Force reload even if something fails
-      localStorage.clear();
+      clearLocalStorageKeepOrgCode();
       sessionStorage.clear();
       window.location.href = '/';
     }
@@ -87,6 +109,23 @@ function Login() {
         <h1 className="login-title">Welcome Back</h1>
         <p className="login-subtitle">Sign in to continue</p>
       </div>
+
+      {accountRemoved && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#dc2626',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          fontSize: '14px',
+          maxWidth: '320px',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          This account is no longer active. Contact your administrator if you think this is a mistake.
+        </div>
+      )}
 
       <div className="login-input-container">
         <input

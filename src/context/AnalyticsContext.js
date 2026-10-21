@@ -142,10 +142,12 @@ export const AnalyticsProvider = ({ children }) => {
       }
     };
 
-    CapacitorApp.addListener('appStateChange', handleAppStateChange);
+    const listener = CapacitorApp.addListener('appStateChange', handleAppStateChange);
 
+    // Remove only this listener; removeAllListeners also dropped the deep link
+    // and refresh-on-resume listeners other parts of the app depend on
     return () => {
-      CapacitorApp.removeAllListeners();
+      Promise.resolve(listener).then(l => l?.remove && l.remove());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isProfileComplete, startSession, endSession]);

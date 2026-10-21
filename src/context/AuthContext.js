@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../config/supabase';
 import { get, set, del } from 'idb-keyval';
 import { logoutOneSignal } from '../services/onesignal';
+import { useRefreshOnFocus } from '../hooks/useRefreshOnFocus';
 // Note: OneSignal initialization is now handled by dedicated components in App.js
 
 const AuthContext = createContext({});
@@ -9,6 +10,9 @@ const AuthContext = createContext({});
 // Keys for cached auth data
 const CACHED_USER_KEY = 'cached_auth_user';
 const CACHED_PROFILE_KEY = 'cached_auth_profile';
+
+// Set when a removed account is signed out, so the login screen can say why
+export const ACCOUNT_REMOVED_KEY = 'account_removed_notice';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -24,6 +28,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const profileFetchRef = useRef(null);
+  const accountCheckRef = useRef(false);
 
   // Fetch profile when user changes
   useEffect(() => {
@@ -207,6 +212,86 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  // The login was deleted, or its users row was: sign out locally and land on login
+  const signOutRemovedAccount = useCallback(async () => {
+    // Set first: signOut fires SIGNED_OUT, which mounts the login screen
+    try {
+      sessionStorage.setItem(ACCOUNT_REMOVED_KEY, 'true');
+    } catch (e) {
+      // Notice is optional
+    }
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.log('Local sign out error:', e);
+    }
+    try {
+      await logoutOneSignal();
+    } catch (e) {
+      console.log('OneSignal logout error:', e);
+    }
+    try {
+      await del(CACHED_USER_KEY);
+      await del(CACHED_PROFILE_KEY);
+    } catch (e) {
+      console.log('Error clearing cached auth:', e);
+    }
+    setUser(null);
+    setUserProfile(null);
+    setLoading(false);
+  }, []);
+
+  // Fresh server check that this login still exists. Only a definite answer
+  // signs out: the auth server rejecting the user (401/403, user_not_found), or
+  // a confirmed-valid login whose users row is gone. Network errors do nothing.
+  // A new signup always has its row: the on_auth_user_created trigger inserts
+  // it in the same transaction that creates the login.
+  const verifyAccount = useCallback(async (userId) => {
+    if (!userId || !navigator.onLine || accountCheckRef.current) return;
+    accountCheckRef.current = true;
+
+    try {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error) {
+        const status = error.status;
+        // bad_jwt is an expired or clock-skewed token, not a missing account
+        if (error.code === 'user_not_found'
+          || ((status === 401 || status === 403) && error.code !== 'bad_jwt')) {
+          console.log('Account no longer exists, signing out:', error.code || status);
+          await signOutRemovedAccount();
+        }
+        return;
+      }
+
+      if (!data?.user || data.user.id !== userId) return;
+
+      const { data: row, error: rowError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!rowError && !row) {
+        console.log('Profile row is gone, signing out');
+        await signOutRemovedAccount();
+      }
+    } catch (err) {
+      console.log('Account check error:', err);
+    } finally {
+      accountCheckRef.current = false;
+    }
+  }, [signOutRemovedAccount]);
+
+  useEffect(() => {
+    if (authChecked && user?.id) verifyAccount(user.id);
+  }, [authChecked, user?.id, verifyAccount]);
+
+  // Re-check whenever the app comes back to the foreground or reconnects
+  useRefreshOnFocus(() => {
+    if (authChecked && user?.id) verifyAccount(user.id);
+  });
+
   const refreshProfile = async () => {
     if (!user?.id) return;
 
@@ -239,8 +324,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.log('Error clearing cached auth:', e);
     }
-    // Clear org code verification
-    localStorage.setItem('org_code_verified', 'false');
+    // The org code flag is per device and stays set on sign-out
     setUser(null);
     setUserProfile(null);
   };
@@ -249,13 +333,14 @@ export const AuthProvider = ({ children }) => {
     if (!user?.id) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ profile_complete: false })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select('id');
 
-      if (error) {
-        console.log('Reset intake error:', error);
+      if (error || !data?.length) {
+        console.log('Reset intake error:', error || 'no row updated');
         return;
       }
 

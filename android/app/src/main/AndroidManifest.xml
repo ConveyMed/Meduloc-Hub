@@ -22,6 +22,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- App Links: password reset and email confirmation emails open the app -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="medulochub.netlify.app" />
+                <data android:pathPrefix="/reset-password" />
+                <data android:pathPrefix="/email-confirmed" />
+            </intent-filter>
+
         </activity>
 
         <provider

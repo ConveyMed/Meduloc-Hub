@@ -380,7 +380,9 @@ export const DeleteAccount = () => {
       await signOut();
     } catch (err) {
       console.error('Delete account error:', err);
-      setError('Failed to delete account. Please try again or contact support.');
+      setError(/developer account/i.test(err?.message || '')
+        ? 'The app developer account cannot be deleted.'
+        : 'Failed to delete account. Please try again or contact support.');
       setLoading(false);
     }
   };

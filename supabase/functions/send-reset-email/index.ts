@@ -49,7 +49,16 @@ serve(async (req) => {
       );
     }
 
-    const link = data.properties.action_link;
+    // Link straight to the app's own domain with the one-time token, so the
+    // phone opens the app (Universal / App Links) and the reset screen verifies
+    // it. Only for our own site: app_url comes from the client, and a token must
+    // never be sent to a domain we do not own. Anything else keeps Supabase's
+    // verify link, which only redirects to allow-listed URLs.
+    const ownSites = ["https://medulochub.netlify.app", Deno.env.get("APP_URL") || ""].filter(Boolean);
+    const tokenHash = data.properties.hashed_token;
+    const link = tokenHash && ownSites.includes(appUrl)
+      ? `${appUrl}/reset-password?token_hash=${encodeURIComponent(tokenHash)}&type=recovery`
+      : data.properties.action_link;
 
     const html = shell({
       heading: "Reset Your Password",

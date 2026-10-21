@@ -1,7 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import '../onboarding/onboarding.css';
+
+// One check per link. The screen remounts while auth settles after the token
+// is used, so the remount waits on the same check instead of reusing a spent token.
+let recoveryCheck = null;
+
+const checkRecoveryLink = () => {
+  if (recoveryCheck) return recoveryCheck;
+
+  recoveryCheck = (async () => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+
+    if (tokenHash) {
+      // Emailed link: /reset-password?token_hash=...&type=recovery
+      window.history.replaceState(null, '', window.location.pathname);
+      const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
+      if (error) console.error('Reset link verify failed:', error);
+      return !error;
+    }
+
+    // Older links put the session in the URL hash; supabase-js reads it during init
+    const { data: { session } } = await supabase.auth.getSession();
+    return !!session;
+  })();
+
+  recoveryCheck.finally(() => { recoveryCheck = null; });
+  return recoveryCheck;
+};
 
 function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -11,7 +39,16 @@ function ResetPassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [linkStatus, setLinkStatus] = useState('checking'); // checking | ready | expired
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+    checkRecoveryLink()
+      .then((ok) => { if (active) setLinkStatus(ok ? 'ready' : 'expired'); })
+      .catch(() => { if (active) setLinkStatus('expired'); });
+    return () => { active = false; };
+  }, []);
 
   // Password requirements
   const requirements = [
@@ -88,6 +125,37 @@ function ResetPassword() {
             style={{ marginTop: '24px' }}
           >
             Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (linkStatus === 'checking') {
+    return (
+      <div className="login-container">
+        <div className="login-header">
+          <h1 className="login-title">Reset Password</h1>
+          <p className="login-subtitle">Checking your reset link...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (linkStatus === 'expired') {
+    return (
+      <div className="login-container">
+        <div className="confirmation-card">
+          <h1 className="confirmation-title">Link Expired</h1>
+          <p className="confirmation-text">
+            This password reset link has expired or was already used. Request a new one to continue.
+          </p>
+          <button
+            className="login-primary-button"
+            onClick={() => navigate('/forgot-password')}
+            style={{ marginTop: '24px' }}
+          >
+            Request New Link
           </button>
         </div>
       </div>

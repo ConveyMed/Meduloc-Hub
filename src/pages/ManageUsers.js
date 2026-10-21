@@ -148,12 +148,14 @@ const ManageUsers = () => {
         is_admin: editRole === 'admin',
       };
 
-      const { error } = await supabase
+      const { data: savedRows, error } = await supabase
         .from('users')
         .update(updateData)
-        .eq('id', selectedUser.id);
+        .eq('id', selectedUser.id)
+        .select('id');
 
       if (error) throw error;
+      if (!savedRows?.length) throw new Error('No user row was updated');
 
       // Update local state
       setUsers(prev => prev.map(u =>

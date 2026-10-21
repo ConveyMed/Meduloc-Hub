@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -16,6 +16,7 @@ import {
   checkAndRequestPermission
 } from './services/onesignal';
 import { supabase } from './config/supabase';
+import { isOrgCodeVerifiedSync, loadOrgCodeVerified, markOrgCodeVerified } from './services/orgCode';
 import Login from './onboarding/Login';
 import SignUp from './onboarding/SignUp';
 import EmailConfirmation from './onboarding/EmailConfirmation';
@@ -166,9 +167,32 @@ function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const [toast, setToast] = useState(null);
+  // null = still reading the saved flag. The code screen never shows until it is known.
   const [orgCodeVerified, setOrgCodeVerified] = useState(() =>
-    localStorage.getItem('org_code_verified') === 'true'
+    isOrgCodeVerifiedSync() ? true : null
   );
+  // A password reset link must reach its screen even on a device that has not
+  // passed the code screen. Captured once, before the hash is consumed.
+  const [launchedFromRecoveryLink] = useState(() =>
+    /type=recovery/.test(window.location.hash + window.location.search)
+  );
+
+  // Always read once at launch: it also moves an older localStorage-only flag into Preferences
+  useEffect(() => {
+    let cancelled = false;
+    loadOrgCodeVerified().then((verified) => {
+      if (!cancelled) setOrgCodeVerified(prev => (prev === true ? true : verified));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // A signed-in user has already got past the code once; never ask them again.
+  useEffect(() => {
+    if (isAuthenticated && orgCodeVerified !== true) {
+      markOrgCodeVerified();
+      setOrgCodeVerified(true);
+    }
+  }, [isAuthenticated, orgCodeVerified]);
 
   // Check for signup confirmation in URL hash and redirect to email-confirmed page
   useEffect(() => {
@@ -180,9 +204,8 @@ function AppContent() {
     }
     // Check for password recovery token and redirect to reset-password page
     if (hash && hash.includes('type=recovery') && location.pathname !== '/reset-password') {
-      // Clear the hash and redirect to reset-password
-      window.history.replaceState(null, '', window.location.pathname);
-      navigate('/reset-password', { replace: true });
+      // Carry the tokens along so the reset screen can still use them
+      navigate('/reset-password' + hash, { replace: true });
     }
     // Check for email change confirmation
     if (hash && hash.includes('type=email_change')) {
@@ -204,28 +227,53 @@ function AppContent() {
     }
   }, [location.pathname, navigate, refreshProfile]);
 
-  // Handle deep links — Universal/App Links route into the native app
+  // Handle deep links — Universal/App Links route into the native app.
+  // Registered once; only this listener is removed on unmount, so the
+  // appStateChange listeners other screens rely on are left alone.
+  const locationRef = useRef(location.pathname);
+  locationRef.current = location.pathname;
+
   useEffect(() => {
     const handleAppUrlOpen = async (event) => {
       if (!event?.url) return;
 
       try {
         const url = new URL(event.url);
+        const queryParams = new URLSearchParams(url.search);
         const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
-        const type = hashParams.get('type');
+        const type = queryParams.get('type') || hashParams.get('type');
+        const tokenHash = queryParams.get('token_hash');
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
 
-        if (type === 'recovery' && accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          });
+        if (url.pathname === '/reset-password' || type === 'recovery') {
+          if (tokenHash) {
+            // The reset screen verifies the one-time token itself
+            navigate(`/reset-password?token_hash=${encodeURIComponent(tokenHash)}&type=recovery`, { replace: true });
+            return;
+          }
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+          }
           navigate('/reset-password', { replace: true });
           return;
         }
 
-        if (url.pathname === '/confirm-email' || location.pathname === '/confirm-email') {
+        if (url.pathname === '/email-confirmed') {
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+          }
+          navigate('/email-confirmed', { replace: true });
+          return;
+        }
+
+        if (url.pathname === '/confirm-email' || locationRef.current === '/confirm-email') {
           navigate('/', { replace: true });
         }
       } catch (err) {
@@ -233,12 +281,12 @@ function AppContent() {
       }
     };
 
-    CapacitorApp.addListener('appUrlOpen', handleAppUrlOpen);
+    const listener = CapacitorApp.addListener('appUrlOpen', handleAppUrlOpen);
 
     return () => {
-      CapacitorApp.removeAllListeners();
+      Promise.resolve(listener).then(l => l?.remove && l.remove());
     };
-  }, [location.pathname, navigate]);
+  }, [navigate]);
 
   // Handle push notification deep links - navigate to relevant screen when notification tapped
   useEffect(() => {
@@ -315,10 +363,10 @@ function AppContent() {
       }
     };
 
-    CapacitorApp.addListener('appStateChange', handleAppStateChange);
+    const listener = CapacitorApp.addListener('appStateChange', handleAppStateChange);
 
     return () => {
-      // Listener cleanup handled by removeAllListeners above
+      Promise.resolve(listener).then(l => l?.remove && l.remove());
     };
   }, [isAuthenticated, isProfileComplete, navigate]);
 
@@ -330,21 +378,23 @@ function AppContent() {
     location.pathname === route || location.pathname.startsWith(route + '/')
   );
 
-  // Public pages bypass org code gate
-  const publicRoutes = ['/support', '/terms', '/privacy'];
-  const isPublicRoute = publicRoutes.some(route => location.pathname === route);
+  // Public pages and auth email links bypass org code gate
+  const publicRoutes = ['/support', '/terms', '/privacy', '/reset-password', '/email-confirmed'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname === route)
+    || launchedFromRecoveryLink;
 
-  // Show organization code gate before anything else (no auth required)
-  if (!orgCodeVerified && !isPublicRoute) {
+  // Organization code gate: only once the saved flag and the session are both
+  // known, and never while someone is signed in.
+  if (orgCodeVerified === false && !loading && !isAuthenticated && !isPublicRoute) {
     return (
       <OrganizationGate onVerified={() => {
-        localStorage.setItem('org_code_verified', 'true');
+        markOrgCodeVerified();
         setOrgCodeVerified(true);
       }} />
     );
   }
 
-  if (loading) {
+  if (loading || (orgCodeVerified === null && !isPublicRoute)) {
     return (
       <div style={{
         display: 'flex',

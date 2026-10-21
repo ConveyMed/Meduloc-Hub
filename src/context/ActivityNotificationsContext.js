@@ -6,6 +6,9 @@ import { logNotificationClick } from '../services/analytics';
 
 const ActivityNotificationsContext = createContext({});
 
+// Notification types the Activity panel renders
+const PANEL_TYPES = ['new_post', 'new_comment'];
+
 export const useActivityNotifications = () => {
   const context = useContext(ActivityNotificationsContext);
   if (!context) {
@@ -184,6 +187,32 @@ export const ActivityNotificationsProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Get all notifications for panel (excluding own activity)
+  // Read items: expire after 24 hours
+  // Unread items: expire after 72 hours
+  // Only types the panel renders, so the bell never counts an item it cannot show
+  const getNotificationsForPanel = useCallback(() => {
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const seventyTwoHoursAgo = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+
+    return notifications.filter(n => {
+      if (n.actor_id === user?.id) return false;
+      if (!PANEL_TYPES.includes(n.type)) return false;
+
+      const createdAt = new Date(n.created_at);
+      const isRead = notificationReads.has(n.id);
+
+      if (isRead) {
+        // Read items expire after 24 hours
+        return createdAt > twentyFourHoursAgo;
+      } else {
+        // Unread items expire after 72 hours
+        return createdAt > seventyTwoHoursAgo;
+      }
+    });
+  }, [notifications, user?.id, notificationReads]);
+
   // Get "NEW" notifications (created after last_checked_at) - controls bell badge
   const getNewNotifications = useCallback(() => {
     // Use user creation date as fallback if no last_checked_at
@@ -212,9 +241,13 @@ export const ActivityNotificationsProvider = ({ children }) => {
     return notificationReads.has(notificationId);
   }, [notificationReads]);
 
-  // Compute values directly (not as callbacks) to ensure they update properly
-  const newNotificationsList = getNewNotifications();
-  const unreadNotificationsList = getUnreadNotifications();
+  // Compute values directly (not as callbacks) to ensure they update properly.
+  // The bell counts only unread items the panel can show right now, so an
+  // empty panel always means no badge and no dot.
+  const panelNotificationIds = new Set(getNotificationsForPanel().map(n => n.id));
+  const unreadNotificationsList = getUnreadNotifications().filter(n => panelNotificationIds.has(n.id));
+  const unreadNotificationIds = new Set(unreadNotificationsList.map(n => n.id));
+  const newNotificationsList = getNewNotifications().filter(n => unreadNotificationIds.has(n.id));
 
   // Check if there are NEW items (for bell badge)
   const hasNew = useCallback(() => {
@@ -235,30 +268,6 @@ export const ActivityNotificationsProvider = ({ children }) => {
   const unreadCount = useCallback(() => {
     return unreadNotificationsList.length;
   }, [unreadNotificationsList]);
-
-  // Get all notifications for panel (excluding own activity)
-  // Read items: expire after 24 hours
-  // Unread items: expire after 72 hours
-  const getNotificationsForPanel = useCallback(() => {
-    const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const seventyTwoHoursAgo = new Date(now.getTime() - 72 * 60 * 60 * 1000);
-
-    return notifications.filter(n => {
-      if (n.actor_id === user?.id) return false;
-
-      const createdAt = new Date(n.created_at);
-      const isRead = notificationReads.has(n.id);
-
-      if (isRead) {
-        // Read items expire after 24 hours
-        return createdAt > twentyFourHoursAgo;
-      } else {
-        // Unread items expire after 72 hours
-        return createdAt > seventyTwoHoursAgo;
-      }
-    });
-  }, [notifications, user?.id, notificationReads]);
 
   // Group notifications for display
   const getGroupedNotifications = useCallback(() => {
@@ -389,11 +398,22 @@ export const ActivityNotificationsProvider = ({ children }) => {
     setNotificationReads(prev => new Set([...prev, notificationId]));
 
     try {
-      await supabase
+      // ignoreDuplicates = ON CONFLICT DO NOTHING, which needs only the INSERT policy
+      const { error } = await supabase
         .from('notification_reads')
-        .insert({ user_id: user.id, notification_id: notificationId });
+        .upsert(
+          { user_id: user.id, notification_id: notificationId },
+          { onConflict: 'user_id,notification_id', ignoreDuplicates: true }
+        );
+      if (error) throw error;
     } catch (err) {
       console.error('Error marking notification as read:', err);
+      // Put the dot back so it matches what was saved
+      setNotificationReads(prev => {
+        const next = new Set(prev);
+        next.delete(notificationId);
+        return next;
+      });
     }
   }, [user?.id, notificationReads]);
 
@@ -435,7 +455,10 @@ export const ActivityNotificationsProvider = ({ children }) => {
       // Insert all unread notifications as read
       if (unread.length > 0) {
         const inserts = unread.map(n => ({ user_id: user.id, notification_id: n.id }));
-        await supabase.from('notification_reads').upsert(inserts, { onConflict: 'user_id,notification_id' });
+        const { error } = await supabase
+          .from('notification_reads')
+          .upsert(inserts, { onConflict: 'user_id,notification_id', ignoreDuplicates: true });
+        if (error) throw error;
       }
 
       // Update last_checked_at
@@ -448,10 +471,11 @@ export const ActivityNotificationsProvider = ({ children }) => {
     }
   }, [user?.id, getUnreadNotifications]);
 
-  // Navigate to a specific notification
-  const navigateToNotification = useCallback((notification) => {
+  // Navigate to a specific notification. `group` is every notification the
+  // tapped row stands for (a grouped comments row), so they all clear together.
+  const navigateToNotification = useCallback((notification, group) => {
     // Mark this notification as read (but DON'T move the "new" marker)
-    markAsRead(notification.id);
+    (group?.length ? group : [notification]).forEach(n => markAsRead(n.id));
 
     // Track notification click for analytics
     if (user?.id) {

@@ -218,11 +218,16 @@ function ProfileComplete({ onComplete }) {
         updateData.profile_image_url = imageUrl;
       }
 
-      const { error } = await supabase
+      // The signup trigger always creates this row, so update it. An upsert
+      // would quietly re-create the row of an account that was removed.
+      const { data: savedRows, error } = await supabase
         .from('users')
-        .upsert({ id: user.id, email: user.email, ...updateData });
+        .update({ email: user.email, ...updateData })
+        .eq('id', user.id)
+        .select('id');
 
       if (error) throw error;
+      if (!savedRows?.length) throw new Error('Your account could not be found. Please sign in again.');
 
       // Notify admins about new user
       notifyNewUserJoined({

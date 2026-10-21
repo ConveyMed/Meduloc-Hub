@@ -147,8 +147,8 @@ export const NotificationPanel = ({ onNavigate }) => {
   const grouped = getGroupedNotifications();
   const hasAny = grouped.totalNew > 0 || grouped.totalOlder > 0;
 
-  const handleItemClick = (notification) => {
-    navigateToNotification(notification);
+  const handleItemClick = (notification, group) => {
+    navigateToNotification(notification, group);
     if (onNavigate) {
       onNavigate(notification);
     }
@@ -274,7 +274,7 @@ export const NotificationPanel = ({ onNavigate }) => {
                           ...styles.notificationItem,
                           ...(!hasUnreadComment ? styles.notificationItemRead : {}),
                         }}
-                        onClick={() => handleItemClick(data.comments[0])}
+                        onClick={() => handleItemClick(data.comments[0], data.comments)}
                       >
                         <div style={styles.itemAvatar}>
                           {data.latestActor?.profile_image_url ? (

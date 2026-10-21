@@ -162,8 +162,9 @@ const EditProfile = () => {
         if (passwordError) throw passwordError;
       }
 
-      // Update profile (don't update email in users table until confirmed)
-      const { error } = await supabase
+      // Update profile (don't update email in users table until confirmed).
+      // .select() so a save that matched no row is an error, not a silent success.
+      const { data: savedRows, error } = await supabase
         .from('users')
         .update({
           first_name: firstName.trim(),
@@ -173,9 +174,11 @@ const EditProfile = () => {
           bio: bio.trim() || null,
           profile_image_url: imageUrl,
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select('id');
 
       if (error) throw error;
+      if (!savedRows?.length) throw new Error('Your profile could not be found. Please sign in again.');
 
       // Clear password fields
       setNewPassword('');

@@ -8,6 +8,8 @@ PODS:
   - CapacitorCordova (8.5.3)
   - CapacitorNetwork (8.0.1):
     - Capacitor
+  - CapacitorPreferences (8.0.1):
+    - Capacitor
   - CapacitorStatusBar (8.0.4):
     - Capacitor
   - CordovaPluginsStatic (8.5.3):
@@ -71,6 +73,7 @@ DEPENDENCIES:
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
+  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
   - CordovaPluginsStatic (from `../capacitor-cordova-ios-plugins`)
   - OneSignalCordovaDependencies (from `https://github.com/OneSignal/OneSignal-Cordova-SDK.git`, tag `5.5.0`)
@@ -91,6 +94,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorNetwork:
     :path: "../../node_modules/@capacitor/network"
+  CapacitorPreferences:
+    :path: "../../node_modules/@capacitor/preferences"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
   CordovaPluginsStatic:
@@ -110,11 +115,12 @@ SPEC CHECKSUMS:
   CapacitorBrowser: f94f92654e92a97981bf346b3681af76527dace0
   CapacitorCordova: 0b7326439c7a09fc5d20eced5e0dab986327a493
   CapacitorNetwork: 8812ce60d11fb63d8f2e4ba51a49b2e59892ebe2
+  CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
   CapacitorStatusBar: ff844df1f126da6c4fbc4028272425fa3a91e7e3
   CordovaPluginsStatic: b465d55f850f9614398b2233e5d9c4e3412d20f2
   OneSignalCordovaDependencies: 8ff37f42703353ef661de0db42a9b8e47ed7810d
   OneSignalXCFramework: f4505256255ae5fccfd33ba2eb1871ba2d4ce2bb
 
-PODFILE CHECKSUM: 5673f87eccaf2981d75071660290867ce07d217e
+PODFILE CHECKSUM: 7abe7eed5205529736685a57185683a827181dfd
 
 COCOAPODS: 1.17.0

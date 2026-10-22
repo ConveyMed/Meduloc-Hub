@@ -60,6 +60,7 @@ platform :ios do
       output_directory: "build",
       output_name:     "Meduloc Hub.ipa",
       clean:           true,
+      xcargs:          "-allowProvisioningUpdates -authenticationKeyPath #{File.expand_path('~/.appstoreconnect/private_keys/AuthKey_9MV2H7DUD5.p8')} -authenticationKeyID 9MV2H7DUD5 -authenticationKeyIssuerID 03e68a23-cd1f-4ae3-aef0-acca2623a3c3",
       export_options: {
         signingStyle: "manual",
         provisioningProfiles: {

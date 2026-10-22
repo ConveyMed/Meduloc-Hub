@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.conveymed.app",
+      "package_name": "com.medulochub.app",
       "sha256_cert_fingerprints": [
-        "5A:1A:E8:44:C2:9B:27:48:6C:32:B5:22:C1:60:54:3B:B8:0A:3B:79:4C:F7:CC:6C:C5:8F:A7:82:00:F1:80:0D"
+        "E5:31:6E:6A:CA:0C:53:CF:C1:13:5A:6A:46:3E:2B:26:4D:4F:E2:14:57:13:32:51:95:E1:F8:FF:CD:E4:0C:94"
       ]
     }
   }
